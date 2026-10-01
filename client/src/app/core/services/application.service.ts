@@ -29,7 +29,7 @@ export class ApplicationService {
       document: {
         fileName: 'marksheet-1711001.pdf',
         originalName: '12th_Standard_Marksheet.pdf',
-        filePath: 'http://localhost:5000/uploads/sample-marksheet.pdf',
+        filePath: `${environment.uploadsUrl}/sample-marksheet.pdf`,
         mimeType: 'application/pdf',
         fileSize: 1048576,
         uploadedAt: new Date(Date.now() - 86400000).toISOString()
@@ -63,7 +63,7 @@ export class ApplicationService {
       document: {
         fileName: 'grad-marksheet-1711002.pdf',
         originalName: 'BSc_Graduation_Final_Grades.pdf',
-        filePath: 'http://localhost:5000/uploads/sample-marksheet.pdf',
+        filePath: `${environment.uploadsUrl}/sample-marksheet.pdf`,
         mimeType: 'application/pdf',
         fileSize: 854200,
         uploadedAt: new Date(Date.now() - 172800000).toISOString()
@@ -92,7 +92,7 @@ export class ApplicationService {
       document: {
         fileName: 'bca-marksheet-1711003.pdf',
         originalName: 'BCA_Transcript.pdf',
-        filePath: 'http://localhost:5000/uploads/sample-marksheet.pdf',
+        filePath: `${environment.uploadsUrl}/sample-marksheet.pdf`,
         mimeType: 'application/pdf',
         fileSize: 1224000,
         uploadedAt: new Date(Date.now() - 259200000).toISOString()
