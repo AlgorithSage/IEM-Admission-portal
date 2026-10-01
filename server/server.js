@@ -31,11 +31,31 @@ if (!fs.existsSync(sampleMarksheetPath)) {
   );
 }
 
-// Global Middlewares
+// Global Middlewares - CORS supporting Vercel deployments & local dev
+const allowedOrigins = [
+  'http://localhost:4200',
+  'http://localhost:5000',
+  'https://iem-admission-portal.vercel.app',
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : [])
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
-    credentials: true
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   })
 );
 app.use(express.json());
