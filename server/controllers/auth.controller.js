@@ -5,6 +5,7 @@ const User = require('../models/User');
 
 // Helper to sign JWT token
 const generateToken = (user) => {
+  const jwtSecret = process.env.JWT_SECRET || 'iem_admission_portal_poc_secret_jwt_key_2026';
   return jwt.sign(
     {
       id: user.id || user._id,
@@ -12,7 +13,7 @@ const generateToken = (user) => {
       name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
       role: user.role
     },
-    process.env.JWT_SECRET,
+    jwtSecret,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
