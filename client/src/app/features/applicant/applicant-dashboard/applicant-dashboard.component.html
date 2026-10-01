@@ -113,20 +113,28 @@
         </div>
         <div class="action-body">
           <h3>Marksheet & Document</h3>
-          <p *ngIf="application">
-            Stored Reference: <code>{{ application.document.fileName }}</code><br>
-            Size: {{ (application.document.fileSize / 1024) | number:'1.0-1' }} KB &bull; Type: {{ application.document.mimeType }}
+          <p *ngIf="application?.document?.fileName">
+            Document: <strong>{{ application.document.originalName || application.document.fileName }}</strong><br>
+            <span class="text-secondary" *ngIf="application.document.fileSize">
+              Size: {{ (application.document.fileSize / 1024) | number:'1.0-1' }} KB &bull; {{ application.document.mimeType || 'Document' }}
+            </span>
+          </p>
+          <p *ngIf="application && !application.document?.fileName">
+            No document attached to your application yet.
           </p>
           <p *ngIf="!application">
             Your marksheet/certificate file reference will appear here once uploaded via the application form.
           </p>
         </div>
         <div class="action-footer">
-          <a *ngIf="application" [href]="application.document.filePath" target="_blank" class="btn btn-dark btn-block">
+          <a *ngIf="application?.document?.filePath" [href]="application.document.filePath" target="_blank" class="btn btn-dark btn-block">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Preview Marksheet File
           </a>
-          <button *ngIf="!application" class="btn btn-outline btn-block" disabled>
-            No Document Yet
+          <a *ngIf="!application" routerLink="/applicant/apply" class="btn btn-outline btn-block">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload in Application Form
+          </a>
+          <button *ngIf="application && !application?.document?.filePath" class="btn btn-outline btn-block" disabled>
+            No File Attached
           </button>
         </div>
       </div>

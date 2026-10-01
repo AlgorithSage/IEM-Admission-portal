@@ -51,6 +51,34 @@
   gap: 12px;
 }
 
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: var(--iem-gold-light);
+  color: var(--iem-gold-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin: 0 auto 16px;
+}
+
+.loading-state h3 {
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.loading-state p {
+  color: var(--text-secondary);
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
