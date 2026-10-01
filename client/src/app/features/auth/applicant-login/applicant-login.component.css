@@ -119,3 +119,116 @@
   color: var(--iem-gold-hover);
   text-decoration: underline;
 }
+
+/* Password Guidelines (i section) */
+.password-info-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  background-color: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-left: 3.5px solid #2563eb;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #1e3a8a;
+  line-height: 1.4;
+}
+
+.password-info-section i {
+  color: #2563eb;
+  font-size: 0.9rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Password Strength Indicator */
+.password-strength-container {
+  margin-top: 8px;
+  margin-bottom: 6px;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.strength-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.strength-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.strength-title i {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.strength-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.strength-badge.strength-weak {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.strength-badge.strength-intermediate {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.strength-badge.strength-strong {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.strength-track {
+  width: 100%;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.strength-bar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.35s ease, background-color 0.35s ease;
+}
+
+.strength-bar.strength-weak {
+  background-color: #ef4444;
+}
+
+.strength-bar.strength-intermediate {
+  background-color: #f59e0b;
+}
+
+.strength-bar.strength-strong {
+  background-color: #10b981;
+}
+

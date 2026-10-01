@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { BvaValidatorService, ValidationFeedback } from '../../../core/services/bva-validator.service';
+import { BvaValidatorService, ValidationFeedback, PasswordStrength } from '../../../core/services/bva-validator.service';
 
 @Component({
   selector: 'app-applicant-login',
@@ -18,6 +18,11 @@ export class ApplicantLoginComponent {
   registerForm: FormGroup;
   errorMessage = '';
   loading = false;
+
+  // Password visibility toggles
+  showLoginPassword = false;
+  showRegisterPassword = false;
+  showRegisterConfirmPassword = false;
 
   constructor(
     private fb: FormBuilder,
@@ -74,6 +79,10 @@ export class ApplicantLoginComponent {
     const ctrl = this.registerForm.get('password');
     if (!ctrl || !ctrl.dirty) return null;
     return this.bva.validatePassword(ctrl.value || '');
+  }
+
+  getPasswordStrength(val: string): PasswordStrength {
+    return this.bva.evaluatePasswordStrength(val || '');
   }
 
   getRegisterConfirmPasswordFeedback(): ValidationFeedback | null {

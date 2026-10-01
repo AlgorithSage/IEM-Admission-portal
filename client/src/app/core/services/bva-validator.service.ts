@@ -7,6 +7,13 @@ export interface ValidationFeedback {
   severity: 'error' | 'success' | 'none';
 }
 
+export interface PasswordStrength {
+  score: number;
+  label: 'Weak' | 'Intermediate' | 'Strong' | '';
+  cssClass: string;
+  percent: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -248,6 +255,45 @@ export class BvaValidatorService {
       rule: 'Valid',
       severity: 'success'
     };
+  }
+
+  /**
+   * Password Strength Analysis (Weak, Intermediate, Strong)
+   */
+  evaluatePasswordStrength(password: string): PasswordStrength {
+    if (!password) {
+      return { score: 0, label: '', cssClass: '', percent: 0 };
+    }
+
+    let criteriaMet = 0;
+    if (password.length >= 8) criteriaMet++;
+    if (/[a-z]/.test(password)) criteriaMet++;
+    if (/[A-Z]/.test(password)) criteriaMet++;
+    if (/\d/.test(password)) criteriaMet++;
+    if (/[^a-zA-Z0-9]/.test(password)) criteriaMet++;
+
+    if (password.length < 6 || criteriaMet <= 2) {
+      return {
+        score: 1,
+        label: 'Weak',
+        cssClass: 'strength-weak',
+        percent: 33
+      };
+    } else if (password.length >= 8 && criteriaMet >= 4) {
+      return {
+        score: 3,
+        label: 'Strong',
+        cssClass: 'strength-strong',
+        percent: 100
+      };
+    } else {
+      return {
+        score: 2,
+        label: 'Intermediate',
+        cssClass: 'strength-intermediate',
+        percent: 66
+      };
+    }
   }
 
   /**

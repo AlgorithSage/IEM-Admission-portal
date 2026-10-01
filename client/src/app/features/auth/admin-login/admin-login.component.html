@@ -33,13 +33,23 @@
 
         <div class="form-group">
           <label class="form-label">Administrative Password <span class="required">*</span></label>
-          <input 
-            type="password" 
-            class="form-control" 
-            formControlName="password" 
-            placeholder="Enter security password"
-            [class.is-invalid]="getPasswordFeedback()?.isValid === false"
-            [class.is-valid]="getPasswordFeedback()?.isValid === true">
+          <div class="password-input-wrapper">
+            <input 
+              [type]="showPassword ? 'text' : 'password'" 
+              class="form-control" 
+              formControlName="password" 
+              placeholder="Enter security password"
+              [class.is-invalid]="getPasswordFeedback()?.isValid === false"
+              [class.is-valid]="getPasswordFeedback()?.isValid === true">
+            <button 
+              type="button" 
+              class="btn-toggle-eye" 
+              (click)="showPassword = !showPassword" 
+              [title]="showPassword ? 'Hide password' : 'Show password'"
+              aria-label="Toggle password visibility">
+              <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+            </button>
+          </div>
           <div *ngIf="getPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>

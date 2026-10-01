@@ -50,13 +50,23 @@
 
         <div class="form-group">
           <label class="form-label">Password <span class="required">*</span></label>
-          <input 
-            type="password" 
-            class="form-control" 
-            formControlName="password" 
-            placeholder="Enter your password"
-            [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false"
-            [class.is-valid]="getLoginPasswordFeedback()?.isValid === true">
+          <div class="password-input-wrapper">
+            <input 
+              [type]="showLoginPassword ? 'text' : 'password'" 
+              class="form-control" 
+              formControlName="password" 
+              placeholder="Enter your password"
+              [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false"
+              [class.is-valid]="getLoginPasswordFeedback()?.isValid === true">
+            <button 
+              type="button" 
+              class="btn-toggle-eye" 
+              (click)="showLoginPassword = !showLoginPassword" 
+              [title]="showLoginPassword ? 'Hide password' : 'Show password'"
+              aria-label="Toggle password visibility">
+              <i [class]="showLoginPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+            </button>
+          </div>
           <div *ngIf="getLoginPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
@@ -122,13 +132,49 @@
         <!-- Create Password -->
         <div class="form-group">
           <label class="form-label">Create Password <span class="required">*</span></label>
-          <input 
-            type="password" 
-            class="form-control" 
-            formControlName="password" 
-            placeholder="Minimum 6 characters"
-            [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false"
-            [class.is-valid]="getRegisterPasswordFeedback()?.isValid === true">
+          <div class="password-input-wrapper">
+            <input 
+              [type]="showRegisterPassword ? 'text' : 'password'" 
+              class="form-control" 
+              formControlName="password" 
+              placeholder="Minimum 6 characters"
+              [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false"
+              [class.is-valid]="getRegisterPasswordFeedback()?.isValid === true">
+            <button 
+              type="button" 
+              class="btn-toggle-eye" 
+              (click)="showRegisterPassword = !showRegisterPassword" 
+              [title]="showRegisterPassword ? 'Hide password' : 'Show password'"
+              aria-label="Toggle password visibility">
+              <i [class]="showRegisterPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+            </button>
+          </div>
+
+          <!-- (i) Info Section for Password Guidelines -->
+          <div class="password-info-section">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>Password must be at least 6 characters. Use letters, numbers, and symbols for higher security.</span>
+          </div>
+
+          <!-- Password Strength Indicator Field (Weak / Intermediate / Strong) -->
+          <div *ngIf="registerForm.get('password')?.value as pwdVal" class="password-strength-container">
+            <div class="strength-header">
+              <span class="strength-title"><i class="fa-solid fa-lock"></i> Password Strength:</span>
+              <span class="strength-badge" [ngClass]="getPasswordStrength(pwdVal).cssClass">
+                <i *ngIf="getPasswordStrength(pwdVal).label === 'Weak'" class="fa-solid fa-shield"></i>
+                <i *ngIf="getPasswordStrength(pwdVal).label === 'Intermediate'" class="fa-solid fa-shield-halved"></i>
+                <i *ngIf="getPasswordStrength(pwdVal).label === 'Strong'" class="fa-solid fa-shield-check"></i>
+                {{ getPasswordStrength(pwdVal).label }}
+              </span>
+            </div>
+            <div class="strength-track">
+              <div class="strength-bar" 
+                   [ngClass]="getPasswordStrength(pwdVal).cssClass" 
+                   [style.width.%]="getPasswordStrength(pwdVal).percent">
+              </div>
+            </div>
+          </div>
+
           <div *ngIf="getRegisterPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
@@ -138,13 +184,23 @@
         <!-- Confirm Password -->
         <div class="form-group">
           <label class="form-label">Confirm Password <span class="required">*</span></label>
-          <input 
-            type="password" 
-            class="form-control" 
-            formControlName="confirmPassword" 
-            placeholder="Repeat password"
-            [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false"
-            [class.is-valid]="getRegisterConfirmPasswordFeedback()?.isValid === true">
+          <div class="password-input-wrapper">
+            <input 
+              [type]="showRegisterConfirmPassword ? 'text' : 'password'" 
+              class="form-control" 
+              formControlName="confirmPassword" 
+              placeholder="Repeat password"
+              [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false"
+              [class.is-valid]="getRegisterConfirmPasswordFeedback()?.isValid === true">
+            <button 
+              type="button" 
+              class="btn-toggle-eye" 
+              (click)="showRegisterConfirmPassword = !showRegisterConfirmPassword" 
+              [title]="showRegisterConfirmPassword ? 'Hide password' : 'Show password'"
+              aria-label="Toggle password visibility">
+              <i [class]="showRegisterConfirmPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+            </button>
+          </div>
           <div *ngIf="getRegisterConfirmPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>

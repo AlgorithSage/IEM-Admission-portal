@@ -16,6 +16,7 @@ export class AdminLoginComponent {
   loginForm: FormGroup;
   errorMessage = '';
   loading = false;
+  showPassword = false;
 
   constructor(
     private fb: FormBuilder,
