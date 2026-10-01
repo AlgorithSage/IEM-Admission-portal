@@ -1,51 +1,95 @@
 <header class="iem-navbar">
   <div class="container nav-container">
-    <!-- Official IEM Brand Logo Matching provided image -->
+    <!-- Brand Logo & Institutional Title -->
     <a routerLink="/" class="nav-brand">
       <img src="assets/iem-logo.png" alt="IEM Logo" class="brand-logo-img">
+      <div class="brand-divider"></div>
       <div class="brand-text">
         <span class="brand-title">IEM ADMISSION PORTAL</span>
         <span class="brand-subtitle">Institute of Engineering & Management</span>
       </div>
     </a>
 
-    <!-- Nav Links Matching landing page.png -->
-    <nav class="nav-links">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Home</a>
-      <a routerLink="/" fragment="programs" class="nav-item">Programs</a>
-      <a routerLink="/" fragment="how-to-apply" class="nav-item">How to Apply</a>
-      <a routerLink="/" fragment="dates" class="nav-item">Important Dates</a>
-      <a routerLink="/" fragment="contact" class="nav-item">Contact Us</a>
+    <!-- Center Navigation Links: Visitor Mode -->
+    <nav class="nav-links" *ngIf="!authService.isAuthenticated()">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+        <i class="fa-solid fa-house"></i> Home
+      </a>
+      <a routerLink="/" fragment="programs" class="nav-item">
+        <i class="fa-solid fa-graduation-cap"></i> Programs
+      </a>
+      <a routerLink="/" fragment="how-to-apply" class="nav-item">
+        <i class="fa-solid fa-circle-question"></i> How to Apply
+      </a>
+      <a routerLink="/" fragment="dates" class="nav-item">
+        <i class="fa-solid fa-calendar-days"></i> Important Dates
+      </a>
+      <a routerLink="/" fragment="contact" class="nav-item">
+        <i class="fa-solid fa-headset"></i> Contact Us
+      </a>
     </nav>
 
-    <!-- Auth Actions -->
+    <!-- Center Navigation Links: Authenticated Applicant -->
+    <nav class="nav-links auth-nav-links" *ngIf="authService.isApplicant()">
+      <a routerLink="/applicant/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item auth-nav-item">
+        <i class="fa-solid fa-gauge-high"></i> Dashboard
+      </a>
+      <a routerLink="/applicant/apply" routerLinkActive="active" class="nav-item auth-nav-item">
+        <i class="fa-solid fa-file-pen"></i> Admission Form
+      </a>
+      <a routerLink="/applicant/status" routerLinkActive="active" class="nav-item auth-nav-item">
+        <i class="fa-solid fa-chart-line"></i> Status & Details
+      </a>
+    </nav>
+
+    <!-- Center Navigation Links: Authenticated Admin -->
+    <nav class="nav-links auth-nav-links" *ngIf="authService.isAdmin()">
+      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item auth-nav-item">
+        <i class="fa-solid fa-table-list"></i> Scrutiny Desk
+      </a>
+      <a routerLink="/" class="nav-item auth-nav-item">
+        <i class="fa-solid fa-globe"></i> Public Portal
+      </a>
+    </nav>
+
+    <!-- Right Side Actions & Profile Widget -->
     <div class="nav-actions">
-      <ng-container *ngIf="!authService.isAuthenticated(); else userLoggedIn">
+      <!-- Unauthenticated State -->
+      <ng-container *ngIf="!authService.isAuthenticated()">
         <button class="btn btn-primary btn-login" (click)="onLoginClick()">
-          <i class="fa-solid fa-user-circle"></i>
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
           <span>Login / Register</span>
         </button>
       </ng-container>
 
-      <ng-template #userLoggedIn>
-        <div class="user-pill-group">
-          <a *ngIf="authService.isApplicant()" routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
-            <i class="fa-solid fa-gauge-high"></i> Dashboard
-          </a>
-          <a *ngIf="authService.isAdmin()" routerLink="/admin/dashboard" class="btn btn-dark btn-sm">
-            <i class="fa-solid fa-shield-halved"></i> Admin Portal
-          </a>
-          <div class="user-info">
-            <span class="user-name">{{ authService.currentUser()?.name }}</span>
-            <span class="user-role-badge" [class.badge-admin]="authService.isAdmin()">
-              {{ authService.currentUser()?.role | titlecase }}
-            </span>
+      <!-- Authenticated Profile Widget -->
+      <ng-container *ngIf="authService.isAuthenticated()">
+        <div class="user-profile-widget">
+          <!-- User Avatar Circle with initials -->
+          <div class="user-avatar" [class.avatar-admin]="authService.isAdmin()" [title]="authService.currentUser()?.name || 'User'">
+            <span>{{ getUserInitials() }}</span>
           </div>
-          <button class="btn btn-sm btn-outline logout-btn" (click)="logout()" title="Sign Out">
+
+          <!-- User Identity Meta -->
+          <div class="user-meta">
+            <span class="user-full-name" [title]="authService.currentUser()?.name">
+              {{ authService.currentUser()?.name }}
+            </span>
+            <div class="user-status-pill" [class.pill-admin]="authService.isAdmin()">
+              <span class="status-dot"></span>
+              <span class="role-text">{{ authService.currentUser()?.role | titlecase }}</span>
+            </div>
+          </div>
+
+          <!-- Vertical Divider inside profile card -->
+          <div class="profile-divider"></div>
+
+          <!-- Logout Button -->
+          <button class="btn-logout" (click)="logout()" title="Sign Out of Portal" aria-label="Sign Out">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
           </button>
         </div>
-      </ng-template>
+      </ng-container>
     </div>
   </div>
 </header>
