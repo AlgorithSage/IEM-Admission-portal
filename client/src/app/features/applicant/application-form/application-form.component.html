@@ -21,7 +21,7 @@
     <div *ngIf="alreadySubmittedApp" class="alert alert-info">
       <i class="fa-solid fa-circle-info"></i>
       <div style="flex: 1;">
-        <strong>Application Already On File:</strong> You have already submitted an admission dossier for <strong>{{ alreadySubmittedApp.department }}</strong> (Current Status: <strong>{{ alreadySubmittedApp.status }}</strong>).
+        <strong>Application Already On File:</strong> You have already submitted an application for <strong>{{ alreadySubmittedApp.department }}</strong> (Current Status: <strong>{{ alreadySubmittedApp.status }}</strong>).
       </div>
       <a routerLink="/applicant/status" class="btn btn-sm btn-dark">View Tracker</a>
     </div>
@@ -242,7 +242,7 @@
           <!-- Document Ready Note -->
           <div *ngIf="selectedFile" class="file-ready-alert mt-2">
             <i class="fa-solid fa-circle-check text-green"></i>
-            <span>Document verified and attached. Click <strong>Submit Application & Save to Database</strong> below to complete your admission dossier.</span>
+            <span>Document verified and attached. Click <strong>Submit Application & Save to Database</strong> below to complete your admission application.</span>
           </div>
 
           <div *ngIf="fileFeedback && !fileFeedback.isValid" class="bva-feedback invalid mt-2">

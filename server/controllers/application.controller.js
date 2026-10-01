@@ -21,7 +21,7 @@ const submitApplication = async (req, res, next) => {
     if (existingApp) {
       return res.status(400).json({
         success: false,
-        message: 'You have already submitted an application. Check status tracker to follow your dossier.'
+        message: 'You have already submitted an application. Check status tracker to track your application status.'
       });
     }
 

@@ -7,7 +7,7 @@
           <i class="fa-solid fa-chart-line"></i>
         </div>
         <div>
-          <h2>Application Status & Dossier</h2>
+          <h2>Application Status & Details</h2>
           <p *ngIf="application">Application Ref: <strong>#{{ (application._id + '').slice(-8).toUpperCase() }}</strong> &bull; Submitted by {{ application.fullName }}</p>
           <p *ngIf="!application && !loading">No application submitted yet.</p>
           <p *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Checking admission registry database...</p>
@@ -28,7 +28,7 @@
       <div class="loading-icon">
         <i class="fa-solid fa-circle-notch fa-spin"></i>
       </div>
-      <h3>Retrieving Application Dossier</h3>
+      <h3>Retrieving Application Details</h3>
       <p>Connecting to IEM Admission Registry database...</p>
     </div>
 
@@ -91,7 +91,7 @@
       </div>
 
       <div class="tracker-grid">
-        <!-- Left: Applicant & Academic Dossier -->
+        <!-- Left: Applicant & Academic Details -->
         <div class="dossier-card card">
           <h3 class="card-section-title">
             <i class="fa-solid fa-id-card text-gold"></i> Applicant Profile & Choices
@@ -161,7 +161,7 @@
 
             <div *ngIf="!application.document?.fileName" class="alert alert-warning">
               <i class="fa-solid fa-triangle-exclamation"></i>
-              <span>No document uploaded for this dossier.</span>
+              <span>No document uploaded for this application.</span>
             </div>
 
             <div class="doc-callout" *ngIf="application.document?.fileName">
