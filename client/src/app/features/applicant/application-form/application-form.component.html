@@ -17,6 +17,15 @@
     </div>
 
 
+    <!-- Existing Application Alert -->
+    <div *ngIf="alreadySubmittedApp" class="alert alert-info">
+      <i class="fa-solid fa-circle-info"></i>
+      <div style="flex: 1;">
+        <strong>Application Already On File:</strong> You have already submitted an admission dossier for <strong>{{ alreadySubmittedApp.department }}</strong> (Current Status: <strong>{{ alreadySubmittedApp.status }}</strong>).
+      </div>
+      <a routerLink="/applicant/status" class="btn btn-sm btn-dark">View Tracker</a>
+    </div>
+
     <!-- Alert Messages -->
     <div *ngIf="successMessage" class="alert alert-success">
       <i class="fa-solid fa-circle-check"></i>
@@ -147,6 +156,10 @@
                 formControlName="qualifyingExam" 
                 placeholder="e.g. Higher Secondary (10+2) / JEE / CAT"
                 [class.is-invalid]="appForm.get('qualifyingExam')?.touched && appForm.get('qualifyingExam')?.invalid">
+              <div *ngIf="appForm.get('qualifyingExam')?.touched && appForm.get('qualifyingExam')?.invalid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">Qualifying examination name is required.</span>
+              </div>
             </div>
 
             <div class="form-group">
@@ -226,6 +239,12 @@
             </button>
           </div>
 
+          <!-- Document Ready Note -->
+          <div *ngIf="selectedFile" class="file-ready-alert mt-2">
+            <i class="fa-solid fa-circle-check text-green"></i>
+            <span>Document verified and attached. Click <strong>Submit Application & Save to Database</strong> below to complete your admission dossier.</span>
+          </div>
+
           <div *ngIf="fileFeedback && !fileFeedback.isValid" class="bva-feedback invalid mt-2">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-text">{{ fileFeedback.message }}</span>
@@ -243,11 +262,17 @@
             <span>By submitting, you certify that all academic and personal records provided are authentic.</span>
           </div>
 
+          <!-- In-view error alert if submission attempted with missing fields -->
+          <div *ngIf="errorMessage" class="alert alert-error mb-3" style="width: 100%;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
           <div class="submit-actions">
             <a routerLink="/applicant/dashboard" class="btn btn-outline">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-lg" [disabled]="appForm.invalid || !selectedFile || loading">
-              <span *ngIf="!loading"><i class="fa-solid fa-paper-plane"></i> Submit Application & Upload</span>
-              <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Uploading & Saving...</span>
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading">
+              <span *ngIf="!loading"><i class="fa-solid fa-paper-plane"></i> Submit Application & Save to Database</span>
+              <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Submitting & Storing in Database...</span>
             </button>
           </div>
         </div>

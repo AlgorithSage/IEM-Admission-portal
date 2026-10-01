@@ -117,7 +117,7 @@ export class ApplicationService {
       { headers: this.authService.getAuthHeaders() }
     ).pipe(
       catchError((err) => {
-        if (err.status === 0 || err.status === 404) {
+        if (err.status === 0) {
           const user = this.authService.currentUser();
           const newApp: Application = {
             _id: 'app_' + Date.now(),
@@ -160,11 +160,16 @@ export class ApplicationService {
       { headers: this.authService.getAuthHeaders() }
     ).pipe(
       catchError((err) => {
-        if (err.status === 0 || err.status === 404) {
+        if (err.status === 404) {
+          // Connected to backend: user has no active application yet
+          return of({ success: true, application: null });
+        }
+        if (err.status === 0) {
+          // Server offline fallback: check if current user has an in-memory application
           const user = this.authService.currentUser();
           const found = this.mockApplications.find(a => 
             typeof a.applicant === 'object' ? a.applicant.email === user?.email : a.email === user?.email
-          ) || this.mockApplications[0];
+          );
           return of({ success: true, application: found || null });
         }
         return throwError(() => err);

@@ -22,6 +22,7 @@ export class ApplicationFormComponent implements OnInit {
   successMessage = '';
 
   departments = ['B.Tech', 'M.Tech', 'MBA', 'MCA', 'BBA'];
+  alreadySubmittedApp: any = null;
 
   constructor(
     private fb: FormBuilder,
@@ -49,9 +50,8 @@ export class ApplicationFormComponent implements OnInit {
     // Check if applicant already submitted an application
     this.applicationService.getMyApplication().subscribe({
       next: (res) => {
-        if (res.application && res.application.status) {
-          // If already submitted, redirect to status tracker
-          // this.router.navigate(['/applicant/status']);
+        if (res.application && res.application._id) {
+          this.alreadySubmittedApp = res.application;
         }
       }
     });
@@ -139,13 +139,29 @@ export class ApplicationFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.appForm.invalid) {
-      this.appForm.markAllAsTouched();
-      return;
-    }
+    this.errorMessage = '';
+    this.fileError = '';
 
-    if (!this.selectedFile) {
-      this.fileError = 'Please upload your marksheet / certificate document.';
+    if (this.appForm.invalid || !this.selectedFile) {
+      this.appForm.markAllAsTouched();
+      const missing: string[] = [];
+      if (this.appForm.get('fullName')?.invalid) missing.push('Full Name');
+      if (this.appForm.get('email')?.invalid) missing.push('Email Address');
+      if (this.appForm.get('phone')?.invalid) missing.push('Mobile Number');
+      if (this.appForm.get('dob')?.invalid) missing.push('Date of Birth');
+      if (this.appForm.get('address')?.invalid) missing.push('Permanent Address (min 10 characters)');
+      if (this.appForm.get('qualifyingExam')?.invalid) missing.push('Qualifying Examination');
+      if (this.appForm.get('passingYear')?.invalid) missing.push('Passing Year');
+      if (this.appForm.get('percentage')?.invalid) missing.push('Percentage (min 45%)');
+      if (!this.selectedFile) {
+        missing.push('Marksheet / Certificate Document');
+        this.fileError = 'Please upload or select your marksheet document.';
+      }
+
+      this.errorMessage = `Please complete all required fields before submitting: ${missing.join(', ')}.`;
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 120, behavior: 'smooth' });
+      }
       return;
     }
 
@@ -162,14 +178,20 @@ export class ApplicationFormComponent implements OnInit {
     this.applicationService.submitApplication(formData).subscribe({
       next: (res) => {
         this.loading = false;
-        this.successMessage = 'Application submitted successfully!';
+        this.successMessage = 'Application submitted and saved to database successfully!';
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 100, behavior: 'smooth' });
+        }
         setTimeout(() => {
           this.router.navigate(['/applicant/status']);
-        }, 1200);
+        }, 1500);
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = err.error?.message || 'Failed to submit application. Please check form values.';
+        this.errorMessage = err.error?.message || 'Failed to submit application. Please verify all inputs.';
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 100, behavior: 'smooth' });
+        }
       }
     });
   }
