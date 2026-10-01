@@ -42,38 +42,69 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Split name into first and last name if needed
-    let fName = firstName;
-    let lName = lastName;
-    if (!fName && name) {
-      const parts = name.trim().split(' ');
-      fName = parts[0];
-      lName = parts.slice(1).join(' ') || '.';
+    let newUser;
+    try {
+      // Split name into first and last name if needed
+      let fName = firstName;
+      let lName = lastName;
+      if (!fName && name) {
+        const parts = name.trim().split(' ');
+        fName = parts[0];
+        lName = parts.slice(1).join(' ') || '.';
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      const userRole = role === 'admin' ? 'admin' : 'applicant';
+
+      // Insert into PostgreSQL with row_version = 1
+      const insertRes = await query(
+        `INSERT INTO users (first_name, last_name, email, password_hash, phone, address, role, row_version)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+         RETURNING id, first_name, last_name, email, phone, address, role, row_version, created_at`,
+        [fName, lName, emailNormalized, passwordHash, phone || '', address || '', userRole]
+      );
+      newUser = insertRes.rows[0];
+    } catch (pgErr) {
+      // PostgreSQL offline or unavailable - fallback seamlessly to MongoDB
+      const existingMongo = await User.findOne({ email: emailNormalized });
+      if (existingMongo) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this email address already exists.'
+        });
+      }
+      const mongoUser = await User.create({
+        name: name || `${firstName || ''} ${lastName || ''}`.trim(),
+        email: emailNormalized,
+        password,
+        phone: phone || '',
+        role: role === 'admin' ? 'admin' : 'applicant'
+      });
+      const token = generateToken(mongoUser);
+      return res.status(201).json({
+        success: true,
+        message: 'Account registered successfully.',
+        token,
+        user: {
+          _id: mongoUser._id,
+          id: mongoUser._id,
+          name: mongoUser.name,
+          email: mongoUser.email,
+          phone: mongoUser.phone,
+          role: mongoUser.role
+        }
+      });
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-    const userRole = role === 'admin' ? 'admin' : 'applicant';
-
-    // Insert into PostgreSQL with row_version = 1
-    const insertRes = await query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, phone, address, role, row_version)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
-       RETURNING id, first_name, last_name, email, phone, address, role, row_version, created_at`,
-      [fName, lName, emailNormalized, passwordHash, phone || '', address || '', userRole]
-    );
-
-    const newUser = insertRes.rows[0];
 
     // Dual-write replica into MongoDB for seamless cross-collection joins
     try {
       await User.findOneAndUpdate(
         { email: emailNormalized },
         {
-          _id: newUser.id.replace(/-/g, '').substring(0, 24),
           name: `${newUser.first_name} ${newUser.last_name}`.trim(),
           email: emailNormalized,
-          password: passwordHash,
+          password: newUser.password_hash,
           phone: newUser.phone,
           role: newUser.role
         },
@@ -87,7 +118,7 @@ const register = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Account registered successfully in PostgreSQL database.',
+      message: 'Account registered successfully.',
       token,
       user: {
         _id: newUser.id,
@@ -108,7 +139,7 @@ const register = async (req, res, next) => {
   }
 };
 
-// @desc    Authenticate user against PostgreSQL & issue JWT
+// @desc    Authenticate user against PostgreSQL / MongoDB & issue JWT
 // @route   POST /api/auth/login
 // @access  Public
 const login = async (req, res, next) => {
@@ -124,19 +155,61 @@ const login = async (req, res, next) => {
 
     const emailNormalized = email.toLowerCase().trim();
 
-    // Query from PostgreSQL users table
-    const result = await query('SELECT * FROM users WHERE email = $1', [emailNormalized]);
+    // 1. Try querying PostgreSQL users table
+    try {
+      const result = await query('SELECT * FROM users WHERE email = $1', [emailNormalized]);
 
-    if (result.rows.length === 0) {
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid email or password.'
+          });
+        }
+
+        if (role && user.role !== role) {
+          return res.status(403).json({
+            success: false,
+            message: `Role mismatch. You cannot log into the ${role} portal with an account assigned to '${user.role}'.`
+          });
+        }
+
+        const token = generateToken(user);
+        return res.status(200).json({
+          success: true,
+          message: 'Logged in successfully.',
+          token,
+          user: {
+            _id: user.id,
+            id: user.id,
+            name: `${user.first_name} ${user.last_name}`.trim(),
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+            role: user.role,
+            rowVersion: user.row_version,
+            createdAt: user.created_at
+          }
+        });
+      }
+    } catch (pgErr) {
+      // PostgreSQL is offline/unreachable - seamlessly fallback to MongoDB
+    }
+
+    // 2. Fallback to MongoDB User authentication
+    const mongoUser = await User.findOne({ email: emailNormalized });
+    if (!mongoUser) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
       });
     }
 
-    const user = result.rows[0];
-
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await mongoUser.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -144,32 +217,26 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Role check if specific portal login requested
-    if (role && user.role !== role) {
+    if (role && mongoUser.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `Role mismatch. You cannot log into the ${role} portal with an account assigned to '${user.role}'.`
+        message: `Role mismatch. You cannot log into the ${role} portal with an account assigned to '${mongoUser.role}'.`
       });
     }
 
-    const token = generateToken(user);
+    const token = generateToken(mongoUser);
 
     res.status(200).json({
       success: true,
-      message: 'Logged in successfully via PostgreSQL authentication.',
+      message: 'Logged in successfully.',
       token,
       user: {
-        _id: user.id,
-        id: user.id,
-        name: `${user.first_name} ${user.last_name}`.trim(),
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        role: user.role,
-        rowVersion: user.row_version,
-        createdAt: user.created_at
+        _id: mongoUser._id,
+        id: mongoUser._id,
+        name: mongoUser.name,
+        email: mongoUser.email,
+        phone: mongoUser.phone,
+        role: mongoUser.role
       }
     });
   } catch (error) {
@@ -178,40 +245,58 @@ const login = async (req, res, next) => {
 };
 
 // @desc    Get current user profile from PostgreSQL
-// @route   GET /api/auth/me
-// @access  Private (Bearer JWT)
 const getMe = async (req, res, next) => {
   try {
-    const result = await query(
-      `SELECT id, first_name, last_name, email, phone, address, role, row_version, created_at, updated_at
-       FROM users WHERE id = $1`,
-      [req.user.id]
-    );
+    try {
+      const result = await query(
+        `SELECT id, first_name, last_name, email, phone, address, role, row_version, created_at, updated_at
+         FROM users WHERE id = $1`,
+        [req.user.id]
+      );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'User profile not found in PostgreSQL.'
-      });
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        return res.status(200).json({
+          success: true,
+          user: {
+            _id: user.id,
+            id: user.id,
+            name: `${user.first_name} ${user.last_name}`.trim(),
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address,
+            role: user.role,
+            rowVersion: user.row_version,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at
+          }
+        });
+      }
+    } catch (pgErr) {
+      // Fallback to MongoDB
     }
 
-    const user = result.rows[0];
+    const mongoUser = await User.findById(req.user.id) || await User.findOne({ email: req.user.email });
+    if (!mongoUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found.'
+      });
+    }
 
     res.status(200).json({
       success: true,
       user: {
-        _id: user.id,
-        id: user.id,
-        name: `${user.first_name} ${user.last_name}`.trim(),
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        role: user.role,
-        rowVersion: user.row_version,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at
+        _id: mongoUser._id,
+        id: mongoUser._id,
+        name: mongoUser.name,
+        email: mongoUser.email,
+        phone: mongoUser.phone,
+        role: mongoUser.role,
+        createdAt: mongoUser.createdAt,
+        updatedAt: mongoUser.updatedAt
       }
     });
   } catch (error) {

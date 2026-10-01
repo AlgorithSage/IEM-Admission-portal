@@ -20,12 +20,15 @@ const poolConfig = process.env.DATABASE_URL
       connectionTimeoutMillis: 5000
     };
 
+let isPostgresConnected = false;
+
 const pool = new Pool(poolConfig);
 
 const initPostgres = async () => {
   let client;
   try {
     client = await pool.connect();
+    isPostgresConnected = true;
     console.log('[PostgreSQL] Connected successfully to host:', process.env.PG_HOST || 'localhost');
 
     // Enable pgcrypto for UUID generation
@@ -90,6 +93,7 @@ const initPostgres = async () => {
 
     console.log('[PostgreSQL] Database tables & audit versioning schema initialized successfully.');
   } catch (error) {
+    isPostgresConnected = false;
     console.error('[PostgreSQL] Initialization error:', error.message);
   } finally {
     if (client) client.release();
@@ -98,6 +102,12 @@ const initPostgres = async () => {
 
 module.exports = {
   pool,
-  query: (text, params) => pool.query(text, params),
+  isPostgresReady: () => isPostgresConnected,
+  query: async (text, params) => {
+    if (!isPostgresConnected) {
+      throw new Error('PostgreSQL database is currently disconnected.');
+    }
+    return pool.query(text, params);
+  },
   initPostgres
 };

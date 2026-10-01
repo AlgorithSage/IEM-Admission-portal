@@ -111,11 +111,22 @@ const submitApplication = async (req, res, next) => {
 // @access  Private (Applicant)
 const getMyApplication = async (req, res, next) => {
   try {
-    const application = await Application.findOne({ applicant: String(req.user.id) });
+    const userId = req.user.id;
+    const userEmail = req.user.email ? req.user.email.toLowerCase().trim() : '';
+
+    const application = await Application.findOne({
+      $or: [
+        { applicant: userId },
+        { applicant: String(userId) },
+        { 'applicant._id': String(userId) },
+        { email: userEmail }
+      ]
+    });
 
     if (!application) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
+        application: null,
         message: 'No active application found for this account.'
       });
     }
