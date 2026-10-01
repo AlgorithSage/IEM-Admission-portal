@@ -48,9 +48,9 @@
                 placeholder="Candidate's full name (e.g. Aarav Sharma)"
                 [class.is-invalid]="fullNameFeedback && !fullNameFeedback.isValid"
                 [class.is-valid]="fullNameFeedback && fullNameFeedback.isValid">
-              <div *ngIf="fullNameFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="fullNameFeedback && !fullNameFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ fullNameFeedback.message }}</span>
               </div>
             </div>
 
@@ -63,9 +63,9 @@
                 placeholder="student@example.com"
                 [class.is-invalid]="emailFeedback && !emailFeedback.isValid"
                 [class.is-valid]="emailFeedback && emailFeedback.isValid">
-              <div *ngIf="emailFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="emailFeedback && !emailFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ emailFeedback.message }}</span>
               </div>
             </div>
 
@@ -78,9 +78,9 @@
                 placeholder="+91 98765 43210"
                 [class.is-invalid]="phoneFeedback && !phoneFeedback.isValid"
                 [class.is-valid]="phoneFeedback && phoneFeedback.isValid">
-              <div *ngIf="phoneFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="phoneFeedback && !phoneFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ phoneFeedback.message }}</span>
               </div>
             </div>
 
@@ -92,9 +92,9 @@
                 formControlName="dob"
                 [class.is-invalid]="dobFeedback && !dobFeedback.isValid"
                 [class.is-valid]="dobFeedback && dobFeedback.isValid">
-              <div *ngIf="dobFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="dobFeedback && !dobFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ dobFeedback.message }}</span>
               </div>
             </div>
 
@@ -116,9 +116,9 @@
                 placeholder="Street address, City, State, PIN"
                 [class.is-invalid]="addressFeedback && !addressFeedback.isValid"
                 [class.is-valid]="addressFeedback && addressFeedback.isValid">
-              <div *ngIf="addressFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="addressFeedback && !addressFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ addressFeedback.message }}</span>
               </div>
             </div>
           </div>
@@ -158,9 +158,9 @@
                 placeholder="e.g. 2026"
                 [class.is-invalid]="passingYearFeedback && !passingYearFeedback.isValid"
                 [class.is-valid]="passingYearFeedback && passingYearFeedback.isValid">
-              <div *ngIf="passingYearFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="passingYearFeedback && !passingYearFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ passingYearFeedback.message }}</span>
               </div>
             </div>
 
@@ -174,9 +174,9 @@
                 placeholder="e.g. 88.5"
                 [class.is-invalid]="percentageFeedback && !percentageFeedback.isValid"
                 [class.is-valid]="percentageFeedback && percentageFeedback.isValid">
-              <div *ngIf="percentageFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-                <span class="bva-badge">{{ fb.rule }}</span>
-                <span class="bva-text">{{ fb.message }}</span>
+              <div *ngIf="percentageFeedback && !percentageFeedback.isValid" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">{{ percentageFeedback.message }}</span>
               </div>
             </div>
           </div>
@@ -226,9 +226,9 @@
             </button>
           </div>
 
-          <div *ngIf="fileFeedback as fb" class="bva-feedback mt-2" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
-            <span class="bva-text">{{ fb.message }}</span>
+          <div *ngIf="fileFeedback && !fileFeedback.isValid" class="bva-feedback invalid mt-2">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span class="bva-text">{{ fileFeedback.message }}</span>
           </div>
 
           <span *ngIf="fileError" class="error-feedback mt-2">

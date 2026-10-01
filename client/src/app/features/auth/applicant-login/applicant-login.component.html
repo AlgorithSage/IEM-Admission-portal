@@ -42,8 +42,8 @@
             placeholder="e.g. aarav.sharma@gmail.com"
             [class.is-invalid]="getLoginEmailFeedback()?.isValid === false"
             [class.is-valid]="getLoginEmailFeedback()?.isValid === true">
-          <div *ngIf="getLoginEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getLoginEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -57,8 +57,8 @@
             placeholder="Enter your password"
             [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false"
             [class.is-valid]="getLoginPasswordFeedback()?.isValid === true">
-          <div *ngIf="getLoginPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getLoginPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -81,8 +81,8 @@
             placeholder="e.g. Aarav Sharma"
             [class.is-invalid]="getRegisterNameFeedback()?.isValid === false"
             [class.is-valid]="getRegisterNameFeedback()?.isValid === true">
-          <div *ngIf="getRegisterNameFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getRegisterNameFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -97,8 +97,8 @@
             placeholder="e.g. student@gmail.com"
             [class.is-invalid]="getRegisterEmailFeedback()?.isValid === false"
             [class.is-valid]="getRegisterEmailFeedback()?.isValid === true">
-          <div *ngIf="getRegisterEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getRegisterEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -113,8 +113,8 @@
             placeholder="e.g. 9876543210 or +91 98765 43210"
             [class.is-invalid]="getRegisterPhoneFeedback()?.isValid === false"
             [class.is-valid]="getRegisterPhoneFeedback()?.isValid === true">
-          <div *ngIf="getRegisterPhoneFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getRegisterPhoneFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -129,8 +129,8 @@
             placeholder="Minimum 6 characters"
             [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false"
             [class.is-valid]="getRegisterPasswordFeedback()?.isValid === true">
-          <div *ngIf="getRegisterPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getRegisterPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -145,8 +145,8 @@
             placeholder="Repeat password"
             [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false"
             [class.is-valid]="getRegisterConfirmPasswordFeedback()?.isValid === true">
-          <div *ngIf="getRegisterConfirmPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getRegisterConfirmPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>

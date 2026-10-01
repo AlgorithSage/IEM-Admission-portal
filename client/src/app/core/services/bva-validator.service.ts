@@ -12,7 +12,7 @@ export interface ValidationFeedback {
 })
 export class BvaValidatorService {
   /**
-   * Email Equivalence Partitioning & Boundary Analysis
+   * Email Validation
    */
   validateEmail(val: string): ValidationFeedback {
     if (!val || val.trim() === '') {
@@ -23,8 +23,8 @@ export class BvaValidatorService {
     if (!email.includes('@')) {
       return {
         isValid: false,
-        message: 'Missing "@" character. Email format must be "username@domain.com".',
-        rule: 'BVA: @ Delimiter',
+        message: 'Please enter a valid email containing "@" (e.g. name@domain.com).',
+        rule: 'Invalid Format',
         severity: 'error'
       };
     }
@@ -33,8 +33,8 @@ export class BvaValidatorService {
     if (parts.length > 2) {
       return {
         isValid: false,
-        message: 'Multiple "@" symbols detected. Only one "@" is permitted.',
-        rule: 'EP: Single Delimiter',
+        message: 'Only one "@" symbol is permitted.',
+        rule: 'Invalid Format',
         severity: 'error'
       };
     }
@@ -46,7 +46,7 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Username prefix before "@" cannot be empty.',
-        rule: 'BVA: Local-part > 0',
+        rule: 'Invalid Format',
         severity: 'error'
       };
     }
@@ -55,7 +55,7 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Domain name missing after "@" (e.g. gmail.com, iem.edu.in).',
-        rule: 'EP: Domain Required',
+        rule: 'Missing Domain',
         severity: 'error'
       };
     }
@@ -63,8 +63,8 @@ export class BvaValidatorService {
     if (!domainPart.includes('.')) {
       return {
         isValid: false,
-        message: 'Domain must include an extension (e.g. ".com", ".in", ".edu").',
-        rule: 'BVA: TLD Delimiter',
+        message: 'Domain must include an extension (e.g. .com, .edu, .in).',
+        rule: 'Missing Extension',
         severity: 'error'
       };
     }
@@ -74,8 +74,8 @@ export class BvaValidatorService {
     if (tld.length < 2) {
       return {
         isValid: false,
-        message: `Top-level domain ".${tld}" too short. Must be at least 2 characters (e.g. .in, .com).`,
-        rule: 'BVA: TLD >= 2 chars',
+        message: `Extension ".${tld}" must be at least 2 characters (e.g. .com, .in).`,
+        rule: 'Invalid Extension',
         severity: 'error'
       };
     }
@@ -85,21 +85,21 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Invalid characters or spacing in email address.',
-        rule: 'EP: Character Whitelist',
+        rule: 'Invalid Characters',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: 'Valid institutional / personal email format.',
-      rule: 'EP: Valid Partition',
+      message: 'Valid email address.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Full Name Equivalence Partitioning & BVA (2 <= length <= 60)
+   * Full Name Validation (2 <= length <= 60, Multi-word)
    */
   validateFullName(val: string): ValidationFeedback {
     if (!val || val.trim() === '') {
@@ -110,8 +110,8 @@ export class BvaValidatorService {
     if (name.length < 2) {
       return {
         isValid: false,
-        message: `Name too short: must be at least 2 characters (currently ${name.length}).`,
-        rule: 'BVA: Length >= 2',
+        message: 'Name must be at least 2 characters long.',
+        rule: 'Too Short',
         severity: 'error'
       };
     }
@@ -119,8 +119,8 @@ export class BvaValidatorService {
     if (name.length > 60) {
       return {
         isValid: false,
-        message: `Name too long: cannot exceed 60 characters (currently ${name.length}).`,
-        rule: 'BVA: Length <= 60',
+        message: 'Name cannot exceed 60 characters.',
+        rule: 'Too Long',
         severity: 'error'
       };
     }
@@ -129,7 +129,7 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Name cannot contain numerical digits.',
-        rule: 'EP: Alphabetic Only',
+        rule: 'Letters Only',
         severity: 'error'
       };
     }
@@ -138,7 +138,7 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Name cannot contain special symbols.',
-        rule: 'EP: Alphabetic Only',
+        rule: 'Letters Only',
         severity: 'error'
       };
     }
@@ -148,21 +148,21 @@ export class BvaValidatorService {
       return {
         isValid: false,
         message: 'Please provide both First Name and Surname (e.g. Aarav Sharma).',
-        rule: 'EP: Multi-word Name',
+        rule: 'Full Name Required',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: 'Valid full candidate name.',
-      rule: 'EP: Valid Partition',
+      message: 'Valid name.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Phone Number BVA (10 digits Indian telecom standard)
+   * Phone Number Validation (10 digits Indian telecom standard)
    */
   validatePhone(val: string): ValidationFeedback {
     if (!val || val.trim() === '') {
@@ -173,20 +173,19 @@ export class BvaValidatorService {
     if (/[a-zA-Z]/.test(raw)) {
       return {
         isValid: false,
-        message: 'Phone number cannot contain alphabetic letters.',
-        rule: 'EP: Digits Only',
+        message: 'Mobile number cannot contain letters.',
+        rule: 'Digits Only',
         severity: 'error'
       };
     }
 
-    // Strip +91, spaces, hyphens
     let clean = raw.replace(/^(\+91|91)/, '').replace(/[\s-]/g, '');
 
     if (clean.length < 10) {
       return {
         isValid: false,
-        message: `Phone number incomplete: exactly 10 digits required (currently ${clean.length} of 10).`,
-        rule: 'BVA: Length == 10',
+        message: `Mobile number incomplete: exactly 10 digits required (${clean.length} of 10).`,
+        rule: '10 Digits Required',
         severity: 'error'
       };
     }
@@ -194,8 +193,8 @@ export class BvaValidatorService {
     if (clean.length > 10) {
       return {
         isValid: false,
-        message: `Phone number too long: cannot exceed 10 digits (currently ${clean.length}).`,
-        rule: 'BVA: Length <= 10',
+        message: `Mobile number cannot exceed 10 digits (${clean.length} entered).`,
+        rule: 'Max 10 Digits',
         severity: 'error'
       };
     }
@@ -203,22 +202,22 @@ export class BvaValidatorService {
     if (!/^[6-9]/.test(clean)) {
       return {
         isValid: false,
-        message: 'Indian mobile numbers must begin with digits 6, 7, 8, or 9.',
-        rule: 'EP: Telecom Standard',
+        message: 'Mobile number must begin with 6, 7, 8, or 9.',
+        rule: 'Invalid Prefix',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: 'Valid 10-digit mobile number (+91 accepted).',
-      rule: 'EP: Valid Partition',
+      message: 'Valid 10-digit mobile number.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Password BVA (Min 6, Max 32)
+   * Password Validation (Min 6, Max 32)
    */
   validatePassword(val: string): ValidationFeedback {
     if (!val) {
@@ -228,8 +227,8 @@ export class BvaValidatorService {
     if (val.length < 6) {
       return {
         isValid: false,
-        message: `Password too short: minimum 6 characters required (currently ${val.length} of 6).`,
-        rule: 'BVA: Min >= 6',
+        message: `Password too short: minimum 6 characters required (${val.length} of 6).`,
+        rule: 'Min 6 Characters',
         severity: 'error'
       };
     }
@@ -237,16 +236,16 @@ export class BvaValidatorService {
     if (val.length > 32) {
       return {
         isValid: false,
-        message: `Password exceeds maximum allowed boundary of 32 characters (currently ${val.length}).`,
-        rule: 'BVA: Max <= 32',
+        message: 'Password cannot exceed 32 characters.',
+        rule: 'Max 32 Characters',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: `Valid password security strength (${val.length} chars).`,
-      rule: 'EP: Valid Partition',
+      message: 'Valid password.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
@@ -256,28 +255,28 @@ export class BvaValidatorService {
    */
   validateConfirmPassword(pass: string, confirm: string): ValidationFeedback {
     if (!confirm) {
-      return { isValid: false, message: 'Please re-type your password.', rule: 'Required', severity: 'error' };
+      return { isValid: false, message: 'Please confirm your password.', rule: 'Required', severity: 'error' };
     }
 
     if (pass !== confirm) {
       return {
         isValid: false,
         message: 'Passwords do not match.',
-        rule: 'EP: Equality Mismatch',
+        rule: 'Mismatch',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: 'Passwords match perfectly.',
-      rule: 'EP: Valid Match',
+      message: 'Passwords match.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Academic Percentage BVA (45.0% <= score <= 100.0%)
+   * Academic Percentage Validation (45.0% <= score <= 100.0%)
    */
   validatePercentage(val: any): ValidationFeedback {
     if (val === null || val === undefined || val === '') {
@@ -288,8 +287,8 @@ export class BvaValidatorService {
     if (isNaN(num)) {
       return {
         isValid: false,
-        message: 'Percentage must be a valid numerical value.',
-        rule: 'EP: Numeric Type',
+        message: 'Please enter a valid numeric percentage.',
+        rule: 'Numeric Required',
         severity: 'error'
       };
     }
@@ -297,8 +296,8 @@ export class BvaValidatorService {
     if (num < 0) {
       return {
         isValid: false,
-        message: 'Percentage cannot be negative (boundary error).',
-        rule: 'BVA: Lower Bound >= 0',
+        message: 'Percentage cannot be negative.',
+        rule: 'Invalid Value',
         severity: 'error'
       };
     }
@@ -306,8 +305,8 @@ export class BvaValidatorService {
     if (num < 45.0) {
       return {
         isValid: false,
-        message: `Eligibility Cutoff Error: Minimum 45.0% required for IEM admission eligibility (entered ${num}%).`,
-        rule: 'BVA: AICTE Cutoff >= 45.0%',
+        message: `Minimum 45.0% aggregate required for admission eligibility (${num}% entered).`,
+        rule: 'Min 45.0% Required',
         severity: 'error'
       };
     }
@@ -315,22 +314,22 @@ export class BvaValidatorService {
     if (num > 100.0) {
       return {
         isValid: false,
-        message: `Percentage cannot exceed 100.0% (entered ${num}% exceeds upper boundary).`,
-        rule: 'BVA: Upper Bound <= 100.0%',
+        message: 'Percentage cannot exceed 100.0%.',
+        rule: 'Max 100%',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: `Eligible academic percentage (${num}%).`,
-      rule: 'EP: Eligible Partition',
+      message: 'Eligible percentage.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Passing Year BVA (2018 <= Year <= 2026)
+   * Passing Year Validation (2018 <= Year <= 2026)
    */
   validatePassingYear(val: any): ValidationFeedback {
     if (!val) {
@@ -339,14 +338,14 @@ export class BvaValidatorService {
 
     const year = Number(val);
     if (isNaN(year)) {
-      return { isValid: false, message: 'Passing year must be a 4-digit number.', rule: 'EP: Numeric', severity: 'error' };
+      return { isValid: false, message: 'Passing year must be a 4-digit year.', rule: 'Invalid Year', severity: 'error' };
     }
 
     if (year < 2018) {
       return {
         isValid: false,
-        message: `Passing year ${year} is outside the eligible window (must be 2018 or later).`,
-        rule: 'BVA: Year >= 2018',
+        message: `Passing year must be 2018 or later (${year} entered).`,
+        rule: 'Eligible: 2018+',
         severity: 'error'
       };
     }
@@ -354,22 +353,22 @@ export class BvaValidatorService {
     if (year > 2026) {
       return {
         isValid: false,
-        message: `Passing year cannot be in the future (cannot exceed 2026).`,
-        rule: 'BVA: Year <= 2026',
+        message: 'Passing year cannot be in the future (up to 2026).',
+        rule: 'Max Year: 2026',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: `Eligible qualifying examination passing year (${year}).`,
-      rule: 'EP: Valid Partition',
+      message: 'Valid passing year.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Date of Birth BVA (16 <= Age <= 35)
+   * Date of Birth Validation (16 <= Age <= 35)
    */
   validateDob(val: string): ValidationFeedback {
     if (!val) {
@@ -380,14 +379,14 @@ export class BvaValidatorService {
     const today = new Date();
 
     if (isNaN(birthDate.getTime())) {
-      return { isValid: false, message: 'Invalid calendar date format.', rule: 'EP: Date Format', severity: 'error' };
+      return { isValid: false, message: 'Please enter a valid date.', rule: 'Invalid Date', severity: 'error' };
     }
 
     if (birthDate > today) {
       return {
         isValid: false,
         message: 'Date of birth cannot be in the future.',
-        rule: 'EP: Temporal Boundary',
+        rule: 'Invalid Date',
         severity: 'error'
       };
     }
@@ -401,8 +400,8 @@ export class BvaValidatorService {
     if (age < 16) {
       return {
         isValid: false,
-        message: `Applicant age (${age} years) is below minimum eligibility boundary of 16 years.`,
-        rule: 'BVA: Age >= 16',
+        message: `Applicant age must be at least 16 years (currently ${age} years).`,
+        rule: 'Min Age 16',
         severity: 'error'
       };
     }
@@ -410,22 +409,22 @@ export class BvaValidatorService {
     if (age > 35) {
       return {
         isValid: false,
-        message: `Applicant age (${age} years) exceeds maximum undergraduate/postgraduate limit of 35 years.`,
-        rule: 'BVA: Age <= 35',
+        message: `Applicant age cannot exceed 35 years (currently ${age} years).`,
+        rule: 'Max Age 35',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: `Eligible candidate age: ${age} years.`,
-      rule: 'EP: Valid Age Partition',
+      message: 'Eligible age.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Address BVA (10 <= length <= 200)
+   * Address Validation (10 <= length <= 200)
    */
   validateAddress(val: string): ValidationFeedback {
     if (!val || val.trim() === '') {
@@ -436,8 +435,8 @@ export class BvaValidatorService {
     if (clean.length < 10) {
       return {
         isValid: false,
-        message: `Address too brief: minimum 10 characters required including street/city (currently ${clean.length} chars).`,
-        rule: 'BVA: Length >= 10',
+        message: `Please provide a complete address with street/city (minimum 10 characters, currently ${clean.length}).`,
+        rule: 'Too Brief',
         severity: 'error'
       };
     }
@@ -445,22 +444,22 @@ export class BvaValidatorService {
     if (clean.length > 200) {
       return {
         isValid: false,
-        message: `Address exceeds maximum boundary of 200 characters (currently ${clean.length} chars).`,
-        rule: 'BVA: Length <= 200',
+        message: 'Address cannot exceed 200 characters.',
+        rule: 'Too Long',
         severity: 'error'
       };
     }
 
     return {
       isValid: true,
-      message: 'Sufficiently detailed communication address.',
-      rule: 'EP: Valid Partition',
+      message: 'Valid address.',
+      rule: 'Valid',
       severity: 'success'
     };
   }
 
   /**
-   * Document File BVA (0 < size <= 5.0 MB, Whitelist MIME)
+   * Document File Validation (0 < size <= 5.0 MB, Whitelist MIME)
    */
   validateFile(file: File | null): ValidationFeedback {
     if (!file) {
@@ -474,8 +473,8 @@ export class BvaValidatorService {
     if (!allowedMime.includes(file.type) && !allowedExt.includes(ext || '')) {
       return {
         isValid: false,
-        message: `Disallowed file format (.${ext}). Only PDF (.pdf) and Image (.jpg, .png) are permitted.`,
-        rule: 'EP: Whitelist MIME Filter',
+        message: `Invalid format (.${ext}). Only PDF (.pdf) and Image files (.jpg, .png) are permitted.`,
+        rule: 'Format Error',
         severity: 'error'
       };
     }
@@ -483,8 +482,8 @@ export class BvaValidatorService {
     if (file.size === 0) {
       return {
         isValid: false,
-        message: 'Empty file detected (0 bytes). Please upload a valid document.',
-        rule: 'BVA: File Size > 0',
+        message: 'Empty file detected. Please upload a valid document.',
+        rule: 'Empty File',
         severity: 'error'
       };
     }
@@ -494,8 +493,8 @@ export class BvaValidatorService {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
       return {
         isValid: false,
-        message: `File size boundary overflow: ${sizeMB} MB exceeds maximum permitted limit of 5.0 MB.`,
-        rule: 'BVA: Max Size <= 5.0MB',
+        message: `File size (${sizeMB} MB) exceeds maximum permitted limit of 5.0 MB.`,
+        rule: 'Max 5MB',
         severity: 'error'
       };
     }
@@ -503,8 +502,8 @@ export class BvaValidatorService {
     const sizeKB = (file.size / 1024).toFixed(1);
     return {
       isValid: true,
-      message: `Valid document format (.${ext}, ${sizeKB} KB). Ready for submission.`,
-      rule: 'EP: Valid File Partition',
+      message: `Valid document (.${ext}, ${sizeKB} KB).`,
+      rule: 'Valid',
       severity: 'success'
     };
   }

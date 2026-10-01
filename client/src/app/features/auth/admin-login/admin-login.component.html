@@ -25,8 +25,8 @@
             placeholder="admin@iem.edu.in"
             [class.is-invalid]="getEmailFeedback()?.isValid === false"
             [class.is-valid]="getEmailFeedback()?.isValid === true">
-          <div *ngIf="getEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
@@ -40,8 +40,8 @@
             placeholder="Enter security password"
             [class.is-invalid]="getPasswordFeedback()?.isValid === false"
             [class.is-valid]="getPasswordFeedback()?.isValid === true">
-          <div *ngIf="getPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
-            <span class="bva-badge">{{ fb.rule }}</span>
+          <div *ngIf="getPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
         </div>
