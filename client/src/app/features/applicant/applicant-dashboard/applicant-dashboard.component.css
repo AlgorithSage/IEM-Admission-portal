@@ -1,0 +1,259 @@
+.dashboard-page {
+  padding: 40px 0 60px;
+  background-color: var(--bg-cream);
+  min-height: calc(100vh - 76px);
+}
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, #ffffff 0%, #fffdf8 100%);
+  border: 1px solid var(--border-light);
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: var(--iem-gold);
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.welcome-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--iem-gold-hover);
+  margin-bottom: 4px;
+}
+
+.welcome-text h2 {
+  font-size: 1.65rem;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.welcome-text p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.app-status-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.status-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+/* Progress Tracker */
+.progress-section {
+  padding: 28px 32px;
+}
+
+.progress-title {
+  font-size: 1.15rem;
+  margin-bottom: 24px;
+  color: #111827;
+}
+
+.steps-tracker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 2;
+  gap: 10px;
+}
+
+.step-indicator {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.step-item.completed .step-indicator {
+  background-color: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+}
+
+.step-item.active .step-indicator {
+  background-color: var(--iem-gold);
+  color: #111827;
+  border-color: var(--iem-gold-hover);
+  box-shadow: 0 0 0 4px var(--iem-gold-light);
+}
+
+.step-label h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.step-label p {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+}
+
+.step-connector {
+  flex: 1;
+  height: 3px;
+  background-color: #e5e7eb;
+  margin: 0 12px;
+  margin-bottom: 30px;
+  transition: all 0.3s ease;
+}
+
+.step-connector.filled {
+  background-color: #10b981;
+}
+
+/* Action Grid */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  border-radius: var(--radius-lg);
+}
+
+.action-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background-color: var(--iem-gold-light);
+  color: var(--iem-gold-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+}
+
+.action-icon.icon-completed {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.action-body {
+  flex: 1;
+}
+
+.action-body h3 {
+  font-size: 1.15rem;
+  margin-bottom: 8px;
+}
+
+.action-body p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+.action-body code {
+  background-color: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Advisory Box */
+.advisory-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background-color: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 20px 24px;
+}
+
+.advisory-icon {
+  font-size: 1.35rem;
+  color: var(--iem-gold-hover);
+}
+
+.advisory-content h4 {
+  font-size: 0.95rem;
+  color: #92400e;
+  margin-bottom: 4px;
+}
+
+.advisory-content p {
+  font-size: 0.85rem;
+  color: #78350f;
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .welcome-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .app-status-box {
+    align-items: flex-start;
+  }
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+  .steps-tracker {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .step-connector {
+    display: none;
+  }
+}

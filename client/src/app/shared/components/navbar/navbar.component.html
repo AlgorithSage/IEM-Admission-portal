@@ -1,0 +1,51 @@
+<header class="iem-navbar">
+  <div class="container nav-container">
+    <!-- Official IEM Brand Logo Matching provided image -->
+    <a routerLink="/" class="nav-brand">
+      <img src="assets/iem-logo.png" alt="IEM Logo" class="brand-logo-img">
+      <div class="brand-text">
+        <span class="brand-title">IEM ADMISSION PORTAL</span>
+        <span class="brand-subtitle">Institute of Engineering & Management</span>
+      </div>
+    </a>
+
+    <!-- Nav Links Matching landing page.png -->
+    <nav class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">Home</a>
+      <a routerLink="/" fragment="programs" class="nav-item">Programs</a>
+      <a routerLink="/" fragment="how-to-apply" class="nav-item">How to Apply</a>
+      <a routerLink="/" fragment="dates" class="nav-item">Important Dates</a>
+      <a routerLink="/" fragment="contact" class="nav-item">Contact Us</a>
+    </nav>
+
+    <!-- Auth Actions -->
+    <div class="nav-actions">
+      <ng-container *ngIf="!authService.isAuthenticated(); else userLoggedIn">
+        <button class="btn btn-primary btn-login" (click)="onLoginClick()">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>Login / Register</span>
+        </button>
+      </ng-container>
+
+      <ng-template #userLoggedIn>
+        <div class="user-pill-group">
+          <a *ngIf="authService.isApplicant()" routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+          </a>
+          <a *ngIf="authService.isAdmin()" routerLink="/admin/dashboard" class="btn btn-dark btn-sm">
+            <i class="fa-solid fa-shield-halved"></i> Admin Portal
+          </a>
+          <div class="user-info">
+            <span class="user-name">{{ authService.currentUser()?.name }}</span>
+            <span class="user-role-badge" [class.badge-admin]="authService.isAdmin()">
+              {{ authService.currentUser()?.role | titlecase }}
+            </span>
+          </div>
+          <button class="btn btn-sm btn-outline logout-btn" (click)="logout()" title="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</header>

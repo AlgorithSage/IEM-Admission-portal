@@ -1,0 +1,185 @@
+<div class="tracker-page">
+  <div class="container tracker-container">
+    <!-- Header -->
+    <div class="tracker-header-card card">
+      <div class="header-info">
+        <div class="header-icon">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div>
+          <h2>Application Status & Dossier</h2>
+          <p *ngIf="application">Application Ref: <strong>#{{ application._id.slice(-8).toUpperCase() }}</strong> &bull; Submitted by {{ application.fullName }}</p>
+          <p *ngIf="!application && !loading">No application submitted yet.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
+          <i class="fa-solid fa-arrow-left"></i> Dashboard
+        </a>
+        <button *ngIf="application" class="btn btn-primary btn-sm" (click)="printReceipt()">
+          <i class="fa-solid fa-print"></i> Print Acknowledgment
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!application && !loading" class="empty-state card">
+      <div class="empty-icon">
+        <i class="fa-solid fa-file-circle-question"></i>
+      </div>
+      <h3>No Active Application Found</h3>
+      <p>You have not submitted an admission application for the current academic session.</p>
+      <a routerLink="/applicant/apply" class="btn btn-primary">
+        <i class="fa-solid fa-pen-to-square"></i> Fill Admission Application
+      </a>
+    </div>
+
+    <!-- Content when application exists -->
+    <div *ngIf="application" class="tracker-body">
+      <!-- Status Banner -->
+      <div class="status-summary-card card" [ngClass]="'border-' + application.status.toLowerCase()">
+        <div class="status-left">
+          <div class="status-indicator-badge" [ngClass]="'badge-' + application.status.toLowerCase()">
+            <i class="fa-solid fa-circle-notch fa-spin" *ngIf="application.status === 'Review'"></i>
+            <i class="fa-solid fa-check" *ngIf="application.status === 'Selected'"></i>
+            <i class="fa-solid fa-xmark" *ngIf="application.status === 'Rejected'"></i>
+            <i class="fa-solid fa-clock" *ngIf="application.status === 'Submitted'"></i>
+          </div>
+          <div>
+            <div class="status-eyebrow">APPLICATION LIFECYCLE STATE</div>
+            <h3>{{ application.status }}</h3>
+            <p *ngIf="application.adminRemarks" class="remarks-text">
+              <i class="fa-solid fa-message"></i> Official Remarks: "{{ application.adminRemarks }}"
+            </p>
+          </div>
+        </div>
+
+        <div class="status-right">
+          <span class="status-pill" [ngClass]="'status-' + application.status.toLowerCase()">
+            {{ application.status }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Provisional Admission Offer Card (When Selected) -->
+      <div *ngIf="application.status === 'Selected'" class="admission-offer-card card">
+        <div class="offer-header">
+          <div class="offer-badge-icon">
+            <i class="fa-solid fa-stamp"></i>
+          </div>
+          <div class="offer-text">
+            <span class="offer-tag">OFFICIAL PROVISIONAL ADMISSION OFFER</span>
+            <h3>Congratulations, {{ application.fullName }}!</h3>
+            <p>You have been provisionally selected for enrollment in <strong>{{ application.department }}</strong> at IEM Kolkata for Academic Year 2026–2027.</p>
+          </div>
+          <div class="offer-actions">
+            <button class="btn btn-primary" (click)="printReceipt()">
+              <i class="fa-solid fa-download"></i> Download Offer Slip
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tracker-grid">
+        <!-- Left: Applicant & Academic Dossier -->
+        <div class="dossier-card card">
+          <h3 class="card-section-title">
+            <i class="fa-solid fa-id-card text-gold"></i> Applicant Profile & Choices
+          </h3>
+
+          <div class="detail-row">
+            <span class="detail-label">Full Name:</span>
+            <span class="detail-value">{{ application.fullName }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Email:</span>
+            <span class="detail-value">{{ application.email }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Mobile Number:</span>
+            <span class="detail-value">{{ application.phone }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Gender / DOB:</span>
+            <span class="detail-value">{{ application.gender }} &bull; {{ application.dob | date:'mediumDate' }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Permanent Address:</span>
+            <span class="detail-value">{{ application.address }}</span>
+          </div>
+
+          <div class="detail-row highlight-row">
+            <span class="detail-label">Applied Program:</span>
+            <span class="detail-value font-bold text-gold">{{ application.department }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Qualifying Exam:</span>
+            <span class="detail-value">{{ application.qualifyingExam }} ({{ application.passingYear }})</span>
+          </div>
+
+          <div class="detail-row highlight-row">
+            <span class="detail-label">Aggregate Score:</span>
+            <span class="detail-value font-bold">{{ application.percentage }}%</span>
+          </div>
+        </div>
+
+        <!-- Right: Document Reference & Audit Timeline -->
+        <div class="tracking-sidebar">
+          <!-- Uploaded Document Verification Box -->
+          <div class="doc-card card">
+            <h3 class="card-section-title">
+              <i class="fa-solid fa-paperclip text-gold"></i> Uploaded Marksheet
+            </h3>
+
+            <div class="doc-meta-box">
+              <div class="doc-icon">
+                <i class="fa-solid fa-file-pdf"></i>
+              </div>
+              <div class="doc-meta-info">
+                <h4>{{ application.document.originalName }}</h4>
+                <p class="doc-file-ref">Verified Archive ID: <code>{{ application.document.fileName }}</code></p>
+                <span class="doc-specs">
+                  {{ (application.document.fileSize / 1024) | number:'1.0-1' }} KB &bull; {{ application.document.mimeType }}
+                </span>
+              </div>
+            </div>
+
+            <div class="doc-callout">
+              <i class="fa-solid fa-shield-check text-green"></i>
+              <span><strong>Document Status:</strong> Securely archived in official IEM Admission Registry.</span>
+            </div>
+
+            <a [href]="application.document.filePath" target="_blank" class="btn btn-outline btn-block mt-3">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Uploaded Marksheet
+            </a>
+          </div>
+
+          <!-- Status Transition History Timeline -->
+          <div class="history-card card">
+            <h3 class="card-section-title">
+              <i class="fa-solid fa-clock-rotate-left text-gold"></i> Verification Audit Log
+            </h3>
+
+            <ul class="timeline-list">
+              <li *ngFor="let h of application.statusHistory">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <div class="timeline-state">
+                    <strong>{{ h.toStatus }}</strong>
+                    <span class="timeline-date">{{ h.changedAt | date:'short' }}</span>
+                  </div>
+                  <p class="timeline-remark">{{ h.remarks || 'Status updated by system/officer' }}</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

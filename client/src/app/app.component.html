@@ -1,0 +1,15 @@
+<div class="app-layout">
+  <!-- Brand Navbar -->
+  <app-navbar (openPathway)="showPathwayModal = true"></app-navbar>
+
+  <!-- Main View Routing -->
+  <main class="main-content">
+    <router-outlet (activate)="onRouteActivate($event)"></router-outlet>
+  </main>
+
+  <!-- Pathway Selector Modal (Applicant vs Admin) -->
+  <app-pathway-modal 
+    *ngIf="showPathwayModal" 
+    (close)="showPathwayModal = false">
+  </app-pathway-modal>
+</div>

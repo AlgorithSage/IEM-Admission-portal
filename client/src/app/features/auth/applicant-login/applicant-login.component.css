@@ -1,0 +1,121 @@
+.auth-page {
+  min-height: calc(100vh - 76px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background-color: var(--bg-cream);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.auth-card {
+  padding: 36px 32px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-iem-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.auth-header h2 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.auth-header p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.demo-banner {
+  background-color: #fffbeb;
+  border: 1px dashed var(--iem-gold);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.demo-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-switcher {
+  display: flex;
+  border-radius: var(--radius-sm);
+  background-color: #f3f4f6;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background-color: var(--surface-white);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.auth-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.back-link {
+  color: var(--text-secondary);
+}
+
+.back-link:hover {
+  color: var(--text-primary);
+}
+
+.admin-switch-link {
+  color: var(--iem-dark);
+  font-weight: 700;
+}
+
+.admin-switch-link:hover {
+  color: var(--iem-gold-hover);
+  text-decoration: underline;
+}

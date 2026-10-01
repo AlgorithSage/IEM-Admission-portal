@@ -1,0 +1,65 @@
+<div class="admin-auth-page">
+  <div class="admin-auth-container">
+    <div class="admin-card card">
+      <!-- Header with official IEM logo -->
+      <div class="admin-header">
+        <img src="assets/iem-logo.png" alt="IEM Logo" class="admin-iem-logo">
+        <h2>IEM Administrative Portal</h2>
+        <p>Restricted to Admission Cell & Scrutiny Officers</p>
+      </div>
+
+      <!-- Error Alert -->
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="admin-form">
+        <div class="form-group">
+          <label class="form-label">Official Staff Email <span class="required">*</span></label>
+          <input 
+            type="email" 
+            class="form-control" 
+            formControlName="email" 
+            placeholder="admin@iem.edu.in"
+            [class.is-invalid]="getEmailFeedback()?.isValid === false"
+            [class.is-valid]="getEmailFeedback()?.isValid === true">
+          <div *ngIf="getEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Administrative Password <span class="required">*</span></label>
+          <input 
+            type="password" 
+            class="form-control" 
+            formControlName="password" 
+            placeholder="Enter security password"
+            [class.is-invalid]="getPasswordFeedback()?.isValid === false"
+            [class.is-valid]="getPasswordFeedback()?.isValid === true">
+          <div *ngIf="getPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-dark btn-block btn-lg" [disabled]="loginForm.invalid || loading">
+          <span *ngIf="!loading"><i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter Admin Panel</span>
+          <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Verifying Credentials...</span>
+        </button>
+      </form>
+
+      <div class="admin-footer">
+        <a routerLink="/" class="back-link">
+          <i class="fa-solid fa-arrow-left"></i> Public Portal
+        </a>
+        <a routerLink="/applicant/login" class="applicant-link">
+          Student / Applicant Login <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

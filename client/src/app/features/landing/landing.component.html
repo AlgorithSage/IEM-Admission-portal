@@ -1,0 +1,238 @@
+<div class="landing-page">
+  <!-- Hero Section with Full-Width Building Background Image -->
+  <section class="hero-section">
+    <div class="hero-backdrop"></div>
+    <div class="container hero-container">
+      <!-- Text Embedded Directly on Hero Background (No Container Box) -->
+      <div class="hero-text-wrapper">
+        <span class="hero-tagline">WELCOME TO IEM ADMISSION PORTAL</span>
+        <h1 class="hero-title">
+          Your Future<br>
+          <span class="title-highlight">Begins Here</span>
+        </h1>
+        <p class="hero-description">
+          Apply to IEM programs easily through our online admission portal. Simple, secure and seamless.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary hero-btn-apply" (click)="onApplyNow()">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Apply Now</span>
+          </button>
+          <button class="btn btn-dark hero-btn-explore" (click)="scrollToSection('programs')">
+            <i class="fa-solid fa-graduation-cap"></i>
+            <span>Explore Programs</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 Feature Highlights Grid Matching landing page.png -->
+  <section class="features-section">
+    <div class="container">
+      <div class="features-grid">
+        <div class="feature-card" *ngFor="let item of features">
+          <div class="feature-icon-wrapper">
+            <i [class]="item.icon"></i>
+          </div>
+          <div class="feature-text">
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.desc }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular Programs Row Matching landing page.png -->
+  <section id="programs" class="programs-section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Popular Programs</h2>
+        <a href="#programs" class="view-all-link">
+          <span>View All Programs</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="programs-grid">
+        <div class="program-card" *ngFor="let prog of programs">
+          <div class="program-icon-circle">
+            <i [class]="prog.icon"></i>
+          </div>
+          <div class="program-info">
+            <h3 class="program-name">{{ prog.name }}</h3>
+            <span class="program-duration">{{ prog.duration }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to Apply (Comprehensive 4-Step Lifecycle & Checklist) -->
+  <section id="how-to-apply" class="how-it-works-section">
+    <div class="container">
+      <div class="section-header center">
+        <span class="section-eyebrow">STEP-BY-STEP ADMISSION GUIDE</span>
+        <h2 class="section-title">How To Apply For Admission</h2>
+        <p class="section-subtitle">Complete your admission journey in four streamlined, transparent stages</p>
+      </div>
+
+      <div class="steps-grid steps-grid-4">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <div class="step-icon"><i class="fa-solid fa-user-plus"></i></div>
+          <h3>Create Account</h3>
+          <p>Register using your verified email address and 10-digit mobile number to generate your personal applicant portal.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <div class="step-icon"><i class="fa-solid fa-file-pen"></i></div>
+          <h3>Fill Application</h3>
+          <p>Provide your personal details, academic scores, select your preferred program (B.Tech, M.Tech, MBA, MCA, BBA), and review eligibility.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <div class="step-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <h3>Upload Marksheet</h3>
+          <p>Upload your qualifying marksheets securely (PDF or image format up to 5MB) for institutional document scrutiny.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">04</div>
+          <div class="step-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+          <h3>Track & Download</h3>
+          <p>Monitor your real-time status as the IEM Admission Cell reviews and publishes your provisional selection confirmation.</p>
+        </div>
+      </div>
+
+      <!-- Required Documents Checklist Table -->
+      <div class="checklist-section mt-5">
+        <div class="section-header">
+          <div>
+            <span class="section-eyebrow">DOCUMENTATION PREPARATION</span>
+            <h3 class="section-title text-xl">Mandatory Documents Checklist</h3>
+          </div>
+        </div>
+
+        <div class="checklist-grid">
+          <div class="checklist-item card">
+            <div class="checklist-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="checklist-content">
+              <h4>Academic Marksheet</h4>
+              <p>Higher Secondary (10+2) / Diploma or Graduation transcript with minimum 45% aggregate score.</p>
+              <span class="badge-req">PDF / JPG &bull; Max 5MB</span>
+            </div>
+          </div>
+
+          <div class="checklist-item card">
+            <div class="checklist-icon"><i class="fa-solid fa-id-card"></i></div>
+            <div class="checklist-content">
+              <h4>Proof of Identity & Age</h4>
+              <p>Government-issued photo identification (Aadhaar Card, Passport, or Birth Certificate).</p>
+              <span class="badge-req">Valid Government ID</span>
+            </div>
+          </div>
+
+          <div class="checklist-item card">
+            <div class="checklist-icon"><i class="fa-solid fa-award"></i></div>
+            <div class="checklist-content">
+              <h4>Entrance Examination Rank Card</h4>
+              <p>Valid rank/scorecard for WBJEE, JEE Main, IEMJEE, CAT, MAT, or qualifying state entrance exam.</p>
+              <span class="badge-req">If Applicable</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Applicant FAQ Section -->
+      <div class="faq-section mt-5">
+        <div class="section-header">
+          <div>
+            <span class="section-eyebrow">APPLICANT CLARIFICATIONS</span>
+            <h3 class="section-title text-xl">Frequently Asked Questions</h3>
+          </div>
+        </div>
+
+        <div class="faq-grid">
+          <div class="faq-card card">
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> What is the minimum academic percentage required?</h4>
+            <p>Under AICTE and institutional norms, applicants must have secured at least 45.0% aggregate marks in their qualifying examination (10+2 or equivalent).</p>
+          </div>
+
+          <div class="faq-card card">
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> How soon will my application be reviewed?</h4>
+            <p>The IEM Admission Scrutiny Cell reviews dossiers on a rolling basis. Application status updates are reflected in your dashboard within 48 to 72 business hours.</p>
+          </div>
+
+          <div class="faq-card card">
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> Can I apply for multiple programs?</h4>
+            <p>Applicants may select their primary desired program during initial submission. Cross-program counseling options are available during the verification phase.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Important Dates & Contact Us -->
+  <section id="dates" class="dates-section">
+    <div class="container dates-container">
+      <div class="dates-box card">
+        <div class="box-header">
+          <i class="fa-solid fa-calendar-check text-gold"></i>
+          <h3>Admission Calendar 2026</h3>
+        </div>
+        <ul class="dates-list">
+          <li>
+            <span class="date-tag">Phase 1</span>
+            <span class="date-event">Application Window Opens</span>
+            <span class="date-value">Active Now</span>
+          </li>
+          <li>
+            <span class="date-tag">Phase 1</span>
+            <span class="date-event">First Merit List Release</span>
+            <span class="date-value">October 15, 2026</span>
+          </li>
+          <li>
+            <span class="date-tag">Phase 2</span>
+            <span class="date-event">Document Verification & Counseling</span>
+            <span class="date-value">October 25, 2026</span>
+          </li>
+        </ul>
+      </div>
+
+      <div id="contact" class="contact-box card">
+        <div class="box-header">
+          <i class="fa-solid fa-headset text-gold"></i>
+          <h3>Admission Helpline</h3>
+        </div>
+        <p class="contact-desc">For any query regarding eligibility, forms, or technical assistance:</p>
+        <div class="contact-details">
+          <div class="contact-item">
+            <i class="fa-solid fa-envelope"></i>
+            <span>admissions&#64;iem.edu.in</span>
+          </div>
+          <div class="contact-item">
+            <i class="fa-solid fa-phone"></i>
+            <span>+91 33 2357 2059 / 2995</span>
+          </div>
+          <div class="contact-item">
+            <i class="fa-solid fa-location-dot"></i>
+            <span>Sector V, Salt Lake Electronics Complex, Kolkata 700091</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="iem-footer">
+    <div class="container footer-content">
+      <p>&copy; 2026 Institute of Engineering & Management (IEM), Kolkata. All rights reserved.</p>
+      <p class="footer-tag">Approved by AICTE &bull; Affiliated to MAKAUT &bull; Accredited by NAAC with Grade 'A'</p>
+    </div>
+  </footer>
+</div>

@@ -1,0 +1,22 @@
+{
+  "name": "iem-admission-portal",
+  "version": "1.0.0",
+  "description": "IEM Admission Portal - MEAN Stack Full-Stack Application",
+  "scripts": {
+    "client": "npm --prefix client start",
+    "server": "npm --prefix server start",
+    "dev:server": "npm --prefix server run dev",
+    "build": "npm --prefix client run build",
+    "install:all": "npm --prefix client install && npm --prefix server install"
+  },
+  "keywords": [
+    "mean-stack",
+    "mongodb",
+    "express",
+    "angular",
+    "nodejs",
+    "admission-portal"
+  ],
+  "author": "IEM Software Engineering Team",
+  "license": "ISC"
+}

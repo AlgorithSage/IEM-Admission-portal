@@ -1,0 +1,272 @@
+<div class="admin-dashboard-page">
+  <div class="container admin-container">
+    <!-- Top Bar -->
+    <div class="admin-header-card card">
+      <div class="header-left">
+        <div class="admin-icon-box">
+          <i class="fa-solid fa-gauge-high"></i>
+        </div>
+        <div>
+          <h2>IEM Admission Scrutiny Cell</h2>
+          <p>Logged in as: <strong>{{ authService.currentUser()?.name }}</strong> (Administrator)</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-outline btn-sm" (click)="loadData()">
+          <i class="fa-solid fa-rotate"></i> Refresh Data
+        </button>
+        <button class="btn btn-dark btn-sm" (click)="authService.logout()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+    </div>
+
+
+    <!-- Aggregation Metrics KPI Cards -->
+    <div class="kpi-grid">
+      <!-- Total -->
+      <div class="kpi-card card">
+        <div class="kpi-icon icon-total">
+          <i class="fa-solid fa-folder-open"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Total Applications</span>
+          <h3 class="kpi-value">{{ stats?.total || 0 }}</h3>
+        </div>
+      </div>
+
+      <!-- Submitted -->
+      <div class="kpi-card card">
+        <div class="kpi-icon icon-submitted">
+          <i class="fa-solid fa-inbox"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Submitted</span>
+          <h3 class="kpi-value text-blue">{{ getStatusCount('Submitted') }}</h3>
+        </div>
+      </div>
+
+      <!-- Under Review -->
+      <div class="kpi-card card">
+        <div class="kpi-icon icon-review">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Under Review</span>
+          <h3 class="kpi-value text-amber">{{ getStatusCount('Review') }}</h3>
+        </div>
+      </div>
+
+      <!-- Selected -->
+      <div class="kpi-card card">
+        <div class="kpi-icon icon-selected">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Selected</span>
+          <h3 class="kpi-value text-green">{{ getStatusCount('Selected') }}</h3>
+        </div>
+      </div>
+
+      <!-- Rejected -->
+      <div class="kpi-card card">
+        <div class="kpi-icon icon-rejected">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Rejected</span>
+          <h3 class="kpi-value text-red">{{ getStatusCount('Rejected') }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Program Distribution KPI Chips -->
+    <div class="department-stats card">
+      <span class="dept-title"><i class="fa-solid fa-chart-pie text-gold"></i> Program-wise Enrollment Distribution:</span>
+      <div class="dept-chips">
+        <span class="dept-chip">B.Tech: <strong>{{ getDepartmentCount('B.Tech') }}</strong></span>
+        <span class="dept-chip">M.Tech: <strong>{{ getDepartmentCount('M.Tech') }}</strong></span>
+        <span class="dept-chip">MBA: <strong>{{ getDepartmentCount('MBA') }}</strong></span>
+        <span class="dept-chip">MCA: <strong>{{ getDepartmentCount('MCA') }}</strong></span>
+        <span class="dept-chip">BBA: <strong>{{ getDepartmentCount('BBA') }}</strong></span>
+      </div>
+    </div>
+
+    <!-- Applications Review Table Section -->
+    <div class="table-card card">
+      <!-- Table Header & Controls -->
+      <div class="table-controls">
+        <div class="controls-left">
+          <h3>Applicant Review & Decision Desk</h3>
+          <p>Review candidate dossiers, inspect uploaded marksheets, and update verification decisions</p>
+        </div>
+
+        <div class="controls-right">
+          <!-- Search -->
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input 
+              type="text" 
+              placeholder="Search candidate name or email..." 
+              [(ngModel)]="searchQuery" 
+              (input)="onFilterChange()">
+          </div>
+
+          <!-- Department Filter -->
+          <select class="filter-select" [(ngModel)]="selectedDepartment" (change)="onFilterChange()">
+            <option *ngFor="let d of departmentOptions" [value]="d">Dept: {{ d }}</option>
+          </select>
+
+          <!-- Status Filter -->
+          <select class="filter-select" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+            <option *ngFor="let s of statusOptions" [value]="s">Status: {{ s }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Applications Table -->
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Applicant Dossier</th>
+              <th>Program</th>
+              <th>Score (%)</th>
+              <th>Marksheet Document</th>
+              <th>Current Status</th>
+              <th>Application Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let app of applications">
+              <td>
+                <div class="applicant-cell">
+                  <span class="app-name">{{ app.fullName }}</span>
+                  <span class="app-meta">{{ app.email }} &bull; {{ app.phone }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge-dept">{{ app.department }}</span>
+              </td>
+              <td>
+                <strong>{{ app.percentage }}%</strong>
+              </td>
+              <td>
+                <div class="doc-cell">
+                  <a [href]="app.document.filePath" target="_blank" class="doc-link" title="View uploaded marksheet">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>{{ app.document.originalName }}</span>
+                  </a>
+                  <span class="doc-size">{{ (app.document.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                </div>
+              </td>
+              <td>
+                <span class="status-pill" [ngClass]="'status-' + app.status.toLowerCase()">
+                  {{ app.status }}
+                </span>
+              </td>
+              <td>
+                <!-- Status Transition Action Buttons -->
+                <div class="workflow-actions">
+                  <!-- From Submitted -> Review -->
+                  <button 
+                    *ngIf="app.status === 'Submitted'" 
+                    class="btn btn-sm btn-outline btn-action" 
+                    (click)="openTransitionModal(app, 'Review')"
+                    [disabled]="updatingId === app._id">
+                    <i class="fa-solid fa-magnifying-glass"></i> Move to Review
+                  </button>
+
+                  <!-- From Review -> Selected OR Rejected -->
+                  <div *ngIf="app.status === 'Review'" class="btn-group">
+                    <button 
+                      class="btn btn-sm btn-select" 
+                      (click)="openTransitionModal(app, 'Selected')"
+                      [disabled]="updatingId === app._id">
+                      <i class="fa-solid fa-check"></i> Select
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-reject" 
+                      (click)="openTransitionModal(app, 'Rejected')"
+                      [disabled]="updatingId === app._id">
+                      <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                  </div>
+
+                  <!-- Terminal states -->
+                  <span *ngIf="app.status === 'Selected'" class="text-green text-sm font-bold">
+                    <i class="fa-solid fa-circle-check"></i> Final: Admitted
+                  </span>
+
+                  <button 
+                    *ngIf="app.status === 'Rejected'" 
+                    class="btn btn-sm btn-outline" 
+                    (click)="openTransitionModal(app, 'Review')"
+                    title="Allow re-evaluation">
+                    Re-evaluate
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="applications.length === 0 && !loading">
+              <td colspan="6" class="no-records">
+                <i class="fa-solid fa-inbox"></i>
+                <p>No admission applications match the selected filter criteria.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- State Transition Confirmation Modal -->
+    <div *ngIf="selectedAppForTransition" class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="header-icon" [ngClass]="'icon-' + targetStatus?.toLowerCase()">
+            <i class="fa-solid fa-arrow-right-arrow-left"></i>
+          </div>
+          <h3>Update Application Status</h3>
+          <p>
+            Transition candidate <strong>{{ selectedAppForTransition.fullName }}</strong> from 
+            <code>{{ selectedAppForTransition.status }}</code> &rarr; <code>{{ targetStatus }}</code>
+          </p>
+          <button class="close-btn" (click)="closeModal()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+
+        <div *ngIf="transitionError" class="alert alert-error">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span>{{ transitionError }}</span>
+        </div>
+
+        <div *ngIf="transitionSuccess" class="alert alert-success">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>{{ transitionSuccess }}</span>
+        </div>
+
+        <div class="form-group mt-3">
+          <label class="form-label">Official Scrutiny Remarks</label>
+          <textarea 
+            class="form-control" 
+            rows="3" 
+            [(ngModel)]="transitionRemarks" 
+            placeholder="Provide justification or reason for this status change..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-outline" (click)="closeModal()" [disabled]="updatingId !== null">
+            Cancel
+          </button>
+          <button class="btn btn-dark" (click)="confirmTransition()" [disabled]="updatingId !== null">
+            <span *ngIf="updatingId === null">Confirm Transition to {{ targetStatus }}</span>
+            <span *ngIf="updatingId !== null"><i class="fa-solid fa-spinner fa-spin"></i> Processing Update...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

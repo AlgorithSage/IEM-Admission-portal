@@ -1,0 +1,171 @@
+<div class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card card">
+      <!-- Header with official IEM logo -->
+      <div class="auth-header">
+        <img src="assets/iem-logo.png" alt="IEM Logo" class="auth-iem-logo">
+        <h2>Applicant Portal</h2>
+        <p>Institute of Engineering & Management &bull; Online Admission System</p>
+      </div>
+
+
+      <!-- Error Alert -->
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Tabs (Sign In / Register) -->
+      <div class="tab-switcher">
+        <button 
+          class="tab-btn" 
+          [class.active]="!isRegisterMode" 
+          (click)="toggleMode(false)">
+          Sign In
+        </button>
+        <button 
+          class="tab-btn" 
+          [class.active]="isRegisterMode" 
+          (click)="toggleMode(true)">
+          New Registration
+        </button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form *ngIf="!isRegisterMode" [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="auth-form">
+        <div class="form-group">
+          <label class="form-label">Registered Email Address <span class="required">*</span></label>
+          <input 
+            type="email" 
+            class="form-control" 
+            formControlName="email" 
+            placeholder="e.g. aarav.sharma@gmail.com"
+            [class.is-invalid]="getLoginEmailFeedback()?.isValid === false"
+            [class.is-valid]="getLoginEmailFeedback()?.isValid === true">
+          <div *ngIf="getLoginEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password <span class="required">*</span></label>
+          <input 
+            type="password" 
+            class="form-control" 
+            formControlName="password" 
+            placeholder="Enter your password"
+            [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false"
+            [class.is-valid]="getLoginPasswordFeedback()?.isValid === true">
+          <div *ngIf="getLoginPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="loginForm.invalid || loading">
+          <span *ngIf="!loading">Sign In to Application Portal</span>
+          <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Authenticating...</span>
+        </button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form *ngIf="isRegisterMode" [formGroup]="registerForm" (ngSubmit)="onRegisterSubmit()" class="auth-form">
+        <!-- Full Name -->
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="required">*</span></label>
+          <input 
+            type="text" 
+            class="form-control" 
+            formControlName="name" 
+            placeholder="e.g. Aarav Sharma"
+            [class.is-invalid]="getRegisterNameFeedback()?.isValid === false"
+            [class.is-valid]="getRegisterNameFeedback()?.isValid === true">
+          <div *ngIf="getRegisterNameFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <!-- Email Address -->
+        <div class="form-group">
+          <label class="form-label">Email Address <span class="required">*</span></label>
+          <input 
+            type="email" 
+            class="form-control" 
+            formControlName="email" 
+            placeholder="e.g. student@gmail.com"
+            [class.is-invalid]="getRegisterEmailFeedback()?.isValid === false"
+            [class.is-valid]="getRegisterEmailFeedback()?.isValid === true">
+          <div *ngIf="getRegisterEmailFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <!-- Mobile Number -->
+        <div class="form-group">
+          <label class="form-label">Mobile Number <span class="required">*</span></label>
+          <input 
+            type="tel" 
+            class="form-control" 
+            formControlName="phone" 
+            placeholder="e.g. 9876543210 or +91 98765 43210"
+            [class.is-invalid]="getRegisterPhoneFeedback()?.isValid === false"
+            [class.is-valid]="getRegisterPhoneFeedback()?.isValid === true">
+          <div *ngIf="getRegisterPhoneFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <!-- Create Password -->
+        <div class="form-group">
+          <label class="form-label">Create Password <span class="required">*</span></label>
+          <input 
+            type="password" 
+            class="form-control" 
+            formControlName="password" 
+            placeholder="Minimum 6 characters"
+            [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false"
+            [class.is-valid]="getRegisterPasswordFeedback()?.isValid === true">
+          <div *ngIf="getRegisterPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group">
+          <label class="form-label">Confirm Password <span class="required">*</span></label>
+          <input 
+            type="password" 
+            class="form-control" 
+            formControlName="confirmPassword" 
+            placeholder="Repeat password"
+            [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false"
+            [class.is-valid]="getRegisterConfirmPasswordFeedback()?.isValid === true">
+          <div *ngIf="getRegisterConfirmPasswordFeedback() as fb" class="bva-feedback" [class.invalid]="!fb.isValid" [class.valid]="fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-message">{{ fb.message }}</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="!isRegisterFormValid() || loading">
+          <span *ngIf="!loading">Create Student Account</span>
+          <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Registering...</span>
+        </button>
+      </form>
+
+      <!-- Footer switch -->
+      <div class="auth-footer">
+        <a routerLink="/" class="back-link">
+          <i class="fa-solid fa-arrow-left"></i> Back to IEM Home
+        </a>
+        <a routerLink="/admin/login" class="admin-switch-link">
+          Staff / Admin Login <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

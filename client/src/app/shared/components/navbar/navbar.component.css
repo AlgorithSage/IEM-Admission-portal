@@ -1,0 +1,140 @@
+.iem-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s ease;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo-img {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.nav-brand:hover .brand-logo-img {
+  transform: scale(1.04);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #111827;
+  letter-spacing: 0.02em;
+}
+
+.brand-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-item {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  position: relative;
+  padding: 6px 0;
+}
+
+.nav-item:hover, .nav-item.active {
+  color: #d97706;
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2.5px;
+  background-color: var(--iem-gold);
+  border-radius: 2px;
+}
+
+.btn-login {
+  background-color: var(--iem-gold);
+  color: #111827;
+  font-weight: 700;
+  padding: 10px 22px;
+  border-radius: 8px;
+}
+
+.user-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.user-role-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.user-role-badge.badge-admin {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.logout-btn {
+  padding: 6px 10px;
+  color: #6b7280;
+}
+
+.logout-btn:hover {
+  color: #ef4444;
+  border-color: #fecaca;
+  background-color: #fef2f2;
+}
+
+@media (max-width: 900px) {
+  .nav-links {
+    display: none;
+  }
+}

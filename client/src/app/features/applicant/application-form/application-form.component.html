@@ -1,0 +1,257 @@
+<div class="apply-page">
+  <div class="container apply-container">
+    <!-- Header -->
+    <div class="form-header-card card">
+      <div class="header-left">
+        <div class="header-badge">
+          <i class="fa-solid fa-file-pen"></i>
+        </div>
+        <div>
+          <h2>IEM Admission Application Form</h2>
+          <p>Academic Year 2026–2027 &bull; Institute of Engineering & Management</p>
+        </div>
+      </div>
+      <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+
+
+    <!-- Alert Messages -->
+    <div *ngIf="successMessage" class="alert alert-success">
+      <i class="fa-solid fa-circle-check"></i>
+      <span>{{ successMessage }} Redirecting to Status Tracker...</span>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-error">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="form-card card">
+      <form [formGroup]="appForm" (ngSubmit)="onSubmit()">
+        <!-- SECTION 1: Personal Details -->
+        <div class="form-section">
+          <div class="section-title-wrap">
+            <span class="section-num">1</span>
+            <h3>Personal & Contact Information</h3>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="required">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="fullName" 
+                placeholder="Candidate's full name (e.g. Aarav Sharma)"
+                [class.is-invalid]="fullNameFeedback && !fullNameFeedback.isValid"
+                [class.is-valid]="fullNameFeedback && fullNameFeedback.isValid">
+              <div *ngIf="fullNameFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Email Address <span class="required">*</span></label>
+              <input 
+                type="email" 
+                class="form-control" 
+                formControlName="email" 
+                placeholder="student@example.com"
+                [class.is-invalid]="emailFeedback && !emailFeedback.isValid"
+                [class.is-valid]="emailFeedback && emailFeedback.isValid">
+              <div *ngIf="emailFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mobile Number <span class="required">*</span></label>
+              <input 
+                type="tel" 
+                class="form-control" 
+                formControlName="phone" 
+                placeholder="+91 98765 43210"
+                [class.is-invalid]="phoneFeedback && !phoneFeedback.isValid"
+                [class.is-valid]="phoneFeedback && phoneFeedback.isValid">
+              <div *ngIf="phoneFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Date of Birth <span class="required">*</span></label>
+              <input 
+                type="date" 
+                class="form-control" 
+                formControlName="dob"
+                [class.is-invalid]="dobFeedback && !dobFeedback.isValid"
+                [class.is-valid]="dobFeedback && dobFeedback.isValid">
+              <div *ngIf="dobFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Gender <span class="required">*</span></label>
+              <select class="form-control" formControlName="gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Permanent Address <span class="required">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="address" 
+                placeholder="Street address, City, State, PIN"
+                [class.is-invalid]="addressFeedback && !addressFeedback.isValid"
+                [class.is-valid]="addressFeedback && addressFeedback.isValid">
+              <div *ngIf="addressFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Academic Details & Program Choice -->
+        <div class="form-section">
+          <div class="section-title-wrap">
+            <span class="section-num">2</span>
+            <h3>Academic Qualifications & Program Choice</h3>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Desired Program / Department <span class="required">*</span></label>
+              <select class="form-control" formControlName="department">
+                <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Qualifying Examination <span class="required">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="qualifyingExam" 
+                placeholder="e.g. Higher Secondary (10+2) / JEE / CAT"
+                [class.is-invalid]="appForm.get('qualifyingExam')?.touched && appForm.get('qualifyingExam')?.invalid">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Passing Year <span class="required">*</span></label>
+              <input 
+                type="number" 
+                class="form-control" 
+                formControlName="passingYear"
+                placeholder="e.g. 2026"
+                [class.is-invalid]="passingYearFeedback && !passingYearFeedback.isValid"
+                [class.is-valid]="passingYearFeedback && passingYearFeedback.isValid">
+              <div *ngIf="passingYearFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Aggregate Percentage / Marks (%) <span class="required">*</span></label>
+              <input 
+                type="number" 
+                step="0.1" 
+                class="form-control" 
+                formControlName="percentage" 
+                placeholder="e.g. 88.5"
+                [class.is-invalid]="percentageFeedback && !percentageFeedback.isValid"
+                [class.is-valid]="percentageFeedback && percentageFeedback.isValid">
+              <div *ngIf="percentageFeedback as fb" class="bva-feedback" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+                <span class="bva-badge">{{ fb.rule }}</span>
+                <span class="bva-text">{{ fb.message }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: Document Upload -->
+        <div class="form-section">
+          <div class="section-title-wrap">
+            <span class="section-num">3</span>
+            <h3>Document Upload (Marksheet / Certificate)</h3>
+          </div>
+
+          <div 
+            class="upload-dropzone" 
+            (drop)="onFileDrop($event)" 
+            (dragover)="onDragOver($event)"
+            *ngIf="!selectedFile">
+            <input 
+              type="file" 
+              id="fileInput" 
+              class="file-hidden-input" 
+              (change)="onFileSelected($event)" 
+              accept=".pdf,.png,.jpg,.jpeg">
+            <label for="fileInput" class="dropzone-label">
+              <div class="upload-icon">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <h4>Click to browse or drag & drop marksheet here</h4>
+              <p>Supported Formats: PDF, PNG, JPG (Maximum size: 5MB)</p>
+              <span class="btn btn-outline btn-sm">Choose File</span>
+            </label>
+          </div>
+
+          <!-- Uploaded File Pill -->
+          <div *ngIf="selectedFile" class="uploaded-pill">
+            <div class="file-info-box">
+              <i class="fa-solid fa-file-pdf text-gold"></i>
+              <div>
+                <span class="file-name">{{ selectedFile.name }}</span>
+                <span class="file-meta">
+                  {{ (selectedFile.size / 1024) | number:'1.0-1' }} KB &bull; {{ selectedFile.type }}
+                </span>
+              </div>
+            </div>
+            <button type="button" class="btn-remove-file" (click)="removeFile()" title="Remove file">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+
+          <div *ngIf="fileFeedback as fb" class="bva-feedback mt-2" [class.valid]="fb.isValid" [class.invalid]="!fb.isValid">
+            <span class="bva-badge">{{ fb.rule }}</span>
+            <span class="bva-text">{{ fb.message }}</span>
+          </div>
+
+          <span *ngIf="fileError" class="error-feedback mt-2">
+            <i class="fa-solid fa-circle-exclamation"></i> {{ fileError }}
+          </span>
+        </div>
+
+        <!-- Form Submit Bar -->
+        <div class="form-submit-bar">
+          <div class="terms-note">
+            <i class="fa-solid fa-circle-check text-green"></i>
+            <span>By submitting, you certify that all academic and personal records provided are authentic.</span>
+          </div>
+
+          <div class="submit-actions">
+            <a routerLink="/applicant/dashboard" class="btn btn-outline">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="appForm.invalid || !selectedFile || loading">
+              <span *ngIf="!loading"><i class="fa-solid fa-paper-plane"></i> Submit Application & Upload</span>
+              <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Uploading & Saving...</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
