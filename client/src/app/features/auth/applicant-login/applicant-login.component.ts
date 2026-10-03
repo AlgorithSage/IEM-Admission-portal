@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -16,9 +16,8 @@ export class ApplicantLoginComponent {
   isRegisterMode = false;
   loginForm: FormGroup;
   registerForm: FormGroup;
-  errorMessage = '';
-  loading = false;
-
+  readonly errorMessage = signal<string>('');
+  readonly loading = signal<boolean>(false);
   // Password visibility toggles
   showLoginPassword = false;
   showRegisterPassword = false;
@@ -103,7 +102,7 @@ export class ApplicantLoginComponent {
 
   toggleMode(mode: boolean): void {
     this.isRegisterMode = mode;
-    this.errorMessage = '';
+    this.errorMessage.set('');
   }
 
   useDemoStudent(): void {
@@ -117,8 +116,8 @@ export class ApplicantLoginComponent {
   onLoginSubmit(): void {
     if (this.loginForm.invalid) return;
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     this.authService.login({
       email: this.loginForm.value.email,
@@ -126,12 +125,12 @@ export class ApplicantLoginComponent {
       role: 'applicant'
     }).subscribe({
       next: (res) => {
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigate(['/applicant/dashboard']);
       },
       error: (err) => {
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Authentication failed. Please verify credentials.';
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Authentication failed. Please verify credentials.');
       }
     });
   }
@@ -139,8 +138,8 @@ export class ApplicantLoginComponent {
   onRegisterSubmit(): void {
     if (this.registerForm.invalid) return;
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     this.authService.register({
       name: this.registerForm.value.name,
@@ -150,12 +149,12 @@ export class ApplicantLoginComponent {
       role: 'applicant'
     }).subscribe({
       next: (res) => {
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigate(['/applicant/dashboard']);
       },
       error: (err) => {
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Registration failed. Email might already exist.';
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Registration failed. Email might already exist.');
       }
     });
   }

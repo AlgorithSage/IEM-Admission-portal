@@ -1,200 +1,117 @@
-<div class="tracker-page">
-  <div class="container tracker-container">
-    <!-- Header -->
-    <div class="tracker-header-card card">
-      <div class="header-info">
-        <div class="header-icon">
-          <i class="fa-solid fa-chart-line"></i>
-        </div>
-        <div>
-          <h2>Application Status & Details</h2>
-          <p *ngIf="application">Application Ref: <strong>#{{ (application._id + '').slice(-8).toUpperCase() }}</strong> &bull; Submitted by {{ application.fullName }}</p>
-          <p *ngIf="!application && !loading">No application submitted yet.</p>
-          <p *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Checking admission registry database...</p>
-        </div>
+<div class="page">
+  <div class="container narrow">
+    <div class="head">
+      <div>
+        <h2>My Application</h2>
+        <p *ngIf="application()?.applicationId">Application ID: <strong>{{ application()?.applicationId }}</strong></p>
       </div>
-      <div class="header-actions">
-        <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
-          <i class="fa-solid fa-arrow-left"></i> Dashboard
-        </a>
-        <button *ngIf="application" class="btn btn-primary btn-sm" (click)="printReceipt()">
-          <i class="fa-solid fa-print"></i> Print Acknowledgment
-        </button>
-      </div>
+      <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">Dashboard</a>
     </div>
 
-    <!-- Loading State -->
-    <div *ngIf="loading" class="loading-state card">
-      <div class="loading-icon">
-        <i class="fa-solid fa-circle-notch fa-spin"></i>
-      </div>
-      <h3>Retrieving Application Details</h3>
-      <p>Connecting to IEM Admission Registry database...</p>
+    <p *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+
+    <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
+    <div *ngIf="message()" class="alert alert-success" role="status"><i class="fa-solid fa-circle-check"></i><span>{{ message() }}</span></div>
+
+    <div *ngIf="!loading() && !application()" class="card box">
+      <p>You have not started an application yet.</p>
+      <a routerLink="/applicant/apply" class="btn btn-primary">Fill Application Form</a>
     </div>
 
-    <!-- Empty State -->
-    <div *ngIf="!application && !loading" class="empty-state card">
-      <div class="empty-icon">
-        <i class="fa-solid fa-file-circle-question"></i>
-      </div>
-      <h3>No Active Application Found</h3>
-      <p>You have not submitted an admission application or uploaded marksheet yet.</p>
-      <a routerLink="/applicant/apply" class="btn btn-primary btn-lg">
-        <i class="fa-solid fa-pen-to-square"></i> Fill Admission Application & Upload Marksheet
-      </a>
-    </div>
+    <ng-container *ngIf="application() as app">
+      <!-- Status -->
+      <div class="card box">
+        <table class="plain-table">
+          <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + app.status.toLowerCase().replace(' ', '-')">{{ app.status }}</span></td></tr>
+          <tr *ngIf="app.adminRemarks"><th>Remarks</th><td>{{ app.adminRemarks }}</td></tr>
+          <tr *ngIf="app.submittedAt"><th>Submitted On</th><td>{{ app.submittedAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
+        </table>
 
-    <!-- Content when application exists -->
-    <div *ngIf="application" class="tracker-body">
-      <!-- Status Banner -->
-      <div class="status-summary-card card" [ngClass]="'border-' + application.status.toLowerCase()">
-        <div class="status-left">
-          <div class="status-indicator-badge" [ngClass]="'badge-' + application.status.toLowerCase()">
-            <i class="fa-solid fa-circle-notch fa-spin" *ngIf="application.status === 'Review'"></i>
-            <i class="fa-solid fa-check" *ngIf="application.status === 'Selected'"></i>
-            <i class="fa-solid fa-xmark" *ngIf="application.status === 'Rejected'"></i>
-            <i class="fa-solid fa-clock" *ngIf="application.status === 'Submitted'"></i>
-          </div>
-          <div>
-            <div class="status-eyebrow">APPLICATION LIFECYCLE STATE</div>
-            <h3>{{ application.status }}</h3>
-            <p *ngIf="application.adminRemarks" class="remarks-text">
-              <i class="fa-solid fa-message"></i> Official Remarks: "{{ application.adminRemarks }}"
-            </p>
-          </div>
+        <div *ngIf="app.status === 'Payment Pending'" class="alert alert-info">
+          <span>Your form and documents are saved. Pay the application fee to complete your submission.</span>
+          <a routerLink="/applicant/payment" class="btn btn-sm btn-primary">Pay Fee</a>
         </div>
 
-        <div class="status-right">
-          <span class="status-pill" [ngClass]="'status-' + application.status.toLowerCase()">
-            {{ application.status }}
-          </span>
+        <div *ngIf="canCorrect" class="alert alert-warning">
+          <span>Please replace the rejected documents below, then click <strong>Resubmit</strong>.</span>
+        </div>
+
+        <div class="actions" *ngIf="app.applicationId || canCorrect">
+          <button *ngIf="app.applicationId" class="btn btn-outline" (click)="downloadSlip()" [disabled]="busyKey() === 'slip'">
+            {{ busyKey() === 'slip' ? 'Downloading...' : 'Download Admission Slip' }}
+          </button>
+          <button *ngIf="canCorrect" class="btn btn-primary" (click)="resubmit()" [disabled]="resubmitting() || rejectedDocuments.length > 0">
+            {{ resubmitting() ? 'Resubmitting...' : 'Resubmit' }}
+          </button>
         </div>
       </div>
 
-      <!-- Provisional Admission Offer Card (When Selected) -->
-      <div *ngIf="application.status === 'Selected'" class="admission-offer-card card">
-        <div class="offer-header">
-          <div class="offer-badge-icon">
-            <i class="fa-solid fa-stamp"></i>
-          </div>
-          <div class="offer-text">
-            <span class="offer-tag">OFFICIAL PROVISIONAL ADMISSION OFFER</span>
-            <h3>Congratulations, {{ application.fullName }}!</h3>
-            <p>You have been provisionally selected for enrollment in <strong>{{ application.department }}</strong> at IEM Kolkata for Academic Year 2026–2027.</p>
-          </div>
-          <div class="offer-actions">
-            <button class="btn btn-primary" (click)="printReceipt()">
-              <i class="fa-solid fa-download"></i> Download Offer Slip
-            </button>
-          </div>
-        </div>
+      <!-- Documents -->
+      <div class="card box">
+        <h3>Documents</h3>
+        <table class="plain-table">
+          <thead>
+            <tr><th>Document</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of app.documents">
+              <td>{{ d.label }}<br><small class="muted">{{ d.originalName }}</small></td>
+              <td>
+                <span [class.text-green]="d.verification.status === 'Verified'" [class.text-red]="d.verification.status === 'Rejected'">{{ d.verification.status }}</span>
+                <br *ngIf="d.verification.remarks"><small *ngIf="d.verification.remarks">{{ d.verification.remarks }}</small>
+              </td>
+              <td class="right">
+                <button class="link-btn" (click)="viewDocument(d)">View</button>
+                <ng-container *ngIf="canCorrect && d.verification.status === 'Rejected'">
+                  <label class="link-btn" [attr.for]="'replace-' + d.key">{{ busyKey() === d.key ? 'Uploading...' : 'Replace' }}</label>
+                  <input type="file" [id]="'replace-' + d.key" class="hidden-input" accept=".pdf,.png,.jpg,.jpeg" (change)="replaceDocument(d, $event)">
+                </ng-container>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <div class="tracker-grid">
-        <!-- Left: Applicant & Academic Details -->
-        <div class="dossier-card card">
-          <h3 class="card-section-title">
-            <i class="fa-solid fa-id-card text-gold"></i> Applicant Profile & Choices
-          </h3>
-
-          <div class="detail-row">
-            <span class="detail-label">Full Name:</span>
-            <span class="detail-value">{{ application.fullName }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span class="detail-label">Email:</span>
-            <span class="detail-value">{{ application.email }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span class="detail-label">Mobile Number:</span>
-            <span class="detail-value">{{ application.phone }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span class="detail-label">Gender / DOB:</span>
-            <span class="detail-value">{{ application.gender }} &bull; {{ application.dob | date:'mediumDate' }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span class="detail-label">Permanent Address:</span>
-            <span class="detail-value">{{ application.address }}</span>
-          </div>
-
-          <div class="detail-row highlight-row">
-            <span class="detail-label">Applied Program:</span>
-            <span class="detail-value font-bold text-gold">{{ application.department }}</span>
-          </div>
-
-          <div class="detail-row">
-            <span class="detail-label">Qualifying Exam:</span>
-            <span class="detail-value">{{ application.qualifyingExam }} ({{ application.passingYear }})</span>
-          </div>
-
-          <div class="detail-row highlight-row">
-            <span class="detail-label">Aggregate Score:</span>
-            <span class="detail-value font-bold">{{ application.percentage }}%</span>
-          </div>
-        </div>
-
-        <!-- Right: Document Reference & Audit Timeline -->
-        <div class="tracking-sidebar">
-          <!-- Uploaded Document Verification Box -->
-          <div class="doc-card card">
-            <h3 class="card-section-title">
-              <i class="fa-solid fa-paperclip text-gold"></i> Uploaded Marksheet & Documents
-            </h3>
-
-            <div *ngIf="application.document?.fileName" class="doc-meta-box">
-              <div class="doc-icon">
-                <i class="fa-solid fa-file-pdf"></i>
-              </div>
-              <div class="doc-meta-info">
-                <h4>{{ application.document.originalName || application.document.fileName }}</h4>
-                <p class="doc-file-ref">Verified Archive ID: <code>{{ application.document.fileName }}</code></p>
-                <span class="doc-specs" *ngIf="application.document.fileSize">
-                  {{ (application.document.fileSize / 1024) | number:'1.0-1' }} KB &bull; {{ application.document.mimeType || 'Document' }}
-                </span>
-              </div>
-            </div>
-
-            <div *ngIf="!application.document?.fileName" class="alert alert-warning">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <span>No document uploaded for this application.</span>
-            </div>
-
-            <div class="doc-callout" *ngIf="application.document?.fileName">
-              <i class="fa-solid fa-shield-check text-green"></i>
-              <span><strong>Document Status:</strong> Securely archived in official IEM Admission Registry.</span>
-            </div>
-
-            <a *ngIf="application.document?.filePath" [href]="application.document.filePath" target="_blank" class="btn btn-outline btn-block mt-3">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Uploaded Marksheet
-            </a>
-          </div>
-
-          <!-- Status Transition History Timeline -->
-          <div class="history-card card">
-            <h3 class="card-section-title">
-              <i class="fa-solid fa-clock-rotate-left text-gold"></i> Verification Audit Log
-            </h3>
-
-            <ul class="timeline-list">
-              <li *ngFor="let h of application.statusHistory">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                  <div class="timeline-state">
-                    <strong>{{ h.toStatus }}</strong>
-                    <span class="timeline-date">{{ h.changedAt | date:'short' }}</span>
-                  </div>
-                  <p class="timeline-remark">{{ h.remarks || 'Status updated by system/officer' }}</p>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
+      <!-- Payment -->
+      <div class="card box" *ngIf="app.payment?.status === 'Paid'">
+        <h3>Payment</h3>
+        <table class="plain-table">
+          <tr><th>Amount</th><td>Rs. {{ app.payment?.amount | number }}</td></tr>
+          <tr><th>Payment ID</th><td>{{ app.payment?.paymentId }}</td></tr>
+          <tr><th>Method</th><td>{{ app.payment?.method }}</td></tr>
+          <tr><th>Paid On</th><td>{{ app.payment?.paidAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
+        </table>
       </div>
-    </div>
+
+      <!-- Details -->
+      <div class="card box">
+        <h3>Application Details</h3>
+        <table class="plain-table">
+          <tr><th>Program</th><td>{{ app.program || app.department }}</td></tr>
+          <tr *ngIf="app.streamPreferences?.length"><th>Stream Preferences</th><td>{{ app.streamPreferences!.join(' > ') }}</td></tr>
+          <tr><th>Name</th><td>{{ app.fullName }}</td></tr>
+          <tr><th>Date of Birth</th><td>{{ app.dob | date:'dd MMM yyyy' }}</td></tr>
+          <tr><th>Gender / Category</th><td>{{ app.gender }} / {{ app.category || '-' }}</td></tr>
+          <tr><th>Email / Mobile</th><td>{{ app.email }} / {{ app.phone }}</td></tr>
+          <tr><th>Address</th><td>{{ app.address }}<span *ngIf="app.city">, {{ app.city }}, {{ app.state }} - {{ app.pincode }}</span></td></tr>
+          <tr *ngIf="app.parents"><th>Parents</th><td>{{ app.parents.fatherName }} (Father), {{ app.parents.motherName }} (Mother)</td></tr>
+          <tr *ngIf="app.classX"><th>Class X</th><td>{{ app.classX.board }}, {{ app.classX.passingYear }} - {{ app.classX.percentage }}%</td></tr>
+          <tr *ngIf="app.classXII"><th>Class XII</th><td>{{ app.classXII.board }}, {{ app.classXII.stream }}, {{ app.classXII.passingYear }} - {{ app.classXII.percentage }}%<span *ngIf="app.classXII.pcmPercentage != null">, PCM {{ app.classXII.pcmPercentage }}%</span></td></tr>
+          <tr *ngIf="app.graduation"><th>Graduation</th><td>{{ app.graduation.degree }}, {{ app.graduation.university }}, {{ app.graduation.passingYear }} - {{ app.graduation.percentage }}%</td></tr>
+          <tr *ngFor="let e of app.competitiveExams"><th>{{ examLabel(e.exam) }} {{ e.year }}</th><td><span *ngIf="e.rank">Rank {{ e.rank | number }}, </span>{{ scoreLabel(e.exam) }} {{ e.score }}, Roll {{ e.rollNumber }}</td></tr>
+        </table>
+      </div>
+
+      <!-- Timeline -->
+      <div class="card box">
+        <h3>Status History</h3>
+        <table class="plain-table">
+          <tr *ngFor="let h of app.statusHistory">
+            <th>{{ h.changedAt | date:'dd MMM yyyy, h:mm a' }}</th>
+            <td><strong>{{ h.toStatus }}</strong><span *ngIf="h.remarks"> - {{ h.remarks }}</span></td>
+          </tr>
+        </table>
+      </div>
+    </ng-container>
   </div>
 </div>

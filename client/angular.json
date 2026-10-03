@@ -64,6 +64,12 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "@vercel/oidc",
+              "async-retry",
+              "is-buffer",
+              "throttleit"
             ]
           },
           "configurations": {

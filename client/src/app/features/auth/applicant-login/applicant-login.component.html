@@ -5,14 +5,14 @@
       <div class="auth-header">
         <img src="assets/iem-logo.png" alt="IEM Logo" class="auth-iem-logo">
         <h2>Applicant Portal</h2>
-        <p>Institute of Engineering & Management &bull; Online Admission System</p>
+        <p>Institute of Engineering &amp; Management</p>
       </div>
 
 
       <!-- Error Alert -->
-      <div *ngIf="errorMessage" class="alert alert-error">
+      <div *ngIf="errorMessage()" class="alert alert-error">
         <i class="fa-solid fa-circle-exclamation"></i>
-        <span>{{ errorMessage }}</span>
+        <span>{{ errorMessage() }}</span>
       </div>
 
       <!-- Tabs (Sign In / Register) -->
@@ -34,7 +34,7 @@
       <!-- LOGIN FORM -->
       <form *ngIf="!isRegisterMode" [formGroup]="loginForm" (ngSubmit)="onLoginSubmit()" class="auth-form">
         <div class="form-group">
-          <label class="form-label">Registered Email Address <span class="required">*</span></label>
+          <label class="form-label">Email Address <span class="required">*</span></label>
           <input 
             type="email" 
             class="form-control" 
@@ -73,9 +73,9 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="loginForm.invalid || loading">
-          <span *ngIf="!loading">Sign In to Application Portal</span>
-          <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Authenticating...</span>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="loginForm.invalid || loading()">
+          <span *ngIf="!loading()">Sign In</span>
+          <span *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Signing in...</span>
         </button>
       </form>
 
@@ -153,7 +153,7 @@
           <!-- (i) Info Section for Password Guidelines -->
           <div class="password-info-section">
             <i class="fa-solid fa-circle-info"></i>
-            <span>Password must be at least 6 characters. Use letters, numbers, and symbols for higher security.</span>
+            <span>At least 6 characters. Mixing letters, numbers and symbols makes it stronger.</span>
           </div>
 
           <!-- Password Strength Indicator Field (Weak / Intermediate / Strong) -->
@@ -207,9 +207,9 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="!isRegisterFormValid() || loading">
-          <span *ngIf="!loading">Create Student Account</span>
-          <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Registering...</span>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" [disabled]="!isRegisterFormValid() || loading()">
+          <span *ngIf="!loading()">Create Account</span>
+          <span *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Registering...</span>
         </button>
       </form>
 

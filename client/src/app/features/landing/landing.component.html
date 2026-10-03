@@ -3,15 +3,14 @@
   <section class="hero-section">
     <div class="hero-backdrop"></div>
     <div class="container hero-container">
-      <!-- Text Embedded Directly on Hero Background (No Container Box) -->
-      <div class="hero-text-wrapper">
-        <span class="hero-tagline">WELCOME TO IEM ADMISSION PORTAL</span>
+            <div class="hero-text-wrapper">
+        <span class="hero-tagline">IEM ADMISSIONS 2026</span>
         <h1 class="hero-title">
           Your Future<br>
           <span class="title-highlight">Begins Here</span>
         </h1>
         <p class="hero-description">
-          Apply to IEM programs easily through our online admission portal. Simple, secure and seamless.
+          Apply online, upload your documents, pay the application fee and track your application in one place.
         </p>
 
         <div class="hero-actions">
@@ -28,7 +27,7 @@
     </div>
   </section>
 
-  <!-- 4 Feature Highlights Grid Matching landing page.png -->
+  <!-- Features -->
   <section class="features-section">
     <div class="container">
       <div class="features-grid">
@@ -45,13 +44,13 @@
     </div>
   </section>
 
-  <!-- Popular Programs Row Matching landing page.png -->
+  <!-- Programs -->
   <section id="programs" class="programs-section">
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Popular Programs</h2>
-        <a href="#programs" class="view-all-link">
-          <span>View All Programs</span>
+        <a href="#fees" class="view-all-link" (click)="$event.preventDefault(); scrollToSection('fees')">
+          <span>Eligibility &amp; Fees</span>
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       </div>
@@ -70,13 +69,54 @@
     </div>
   </section>
 
-  <!-- How to Apply (Comprehensive 4-Step Lifecycle & Checklist) -->
+  <!-- Courses, Eligibility & Fees (from IEM admission criteria) -->
+  <section id="fees" class="fees-section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Courses, Eligibility &amp; Fees</h2>
+      </div>
+
+      <div class="fees-table-wrap">
+        <table class="fees-table">
+          <thead>
+            <tr>
+              <th>Course &amp; Stream</th>
+              <th>Minimum Eligibility</th>
+              <th>Entrance</th>
+              <th>Duration</th>
+              <th>Fees</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of courseRows">
+              <td><strong>{{ row.program }}</strong><br>{{ row.stream.name }}</td>
+              <td>{{ eligibilityText(row.stream) }}</td>
+              <td>{{ row.stream.entrance }}<br><small>{{ row.exams }}</small></td>
+              <td>{{ row.stream.durationYears }} years</td>
+              <td>
+                1st sem {{ inr(row.stream.fees.firstSemester) }}<br>
+                Later {{ inr(row.stream.fees.laterSemester) }} / sem<br>
+                <strong>Total {{ inr(row.stream.fees.total) }}</strong>
+                <ng-container *ngIf="row.stream.fees.booking"><br><small>Booking: {{ row.stream.fees.booking }}</small></ng-container>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="fees-note">
+        Indicative cutoffs: CAT 50&ndash;55 percentile minimum; MAT composite 500 for GD-PI call; IEMCET closing ranks around 1,500&ndash;2,000.
+        MBA selection also includes an aptitude test and GD/PI. All candidates pay Rs. 6,500 for uniform and Rs. 1,000 for the medical fitness report.
+      </p>
+    </div>
+  </section>
+
+  <!-- How to apply -->
   <section id="how-to-apply" class="how-it-works-section">
     <div class="container">
       <div class="section-header center">
-        <span class="section-eyebrow">STEP-BY-STEP ADMISSION GUIDE</span>
-        <h2 class="section-title">How To Apply For Admission</h2>
-        <p class="section-subtitle">Complete your admission journey in four streamlined, transparent stages</p>
+                <h2 class="section-title">How To Apply For Admission</h2>
+        <p class="section-subtitle">Four steps from registration to your application ID</p>
       </div>
 
       <div class="steps-grid steps-grid-4">
@@ -84,28 +124,28 @@
           <div class="step-number">01</div>
           <div class="step-icon"><i class="fa-solid fa-user-plus"></i></div>
           <h3>Create Account</h3>
-          <p>Register using your verified email address and 10-digit mobile number to generate your personal applicant portal.</p>
+          <p>Register with your email address and mobile number.</p>
         </div>
 
         <div class="step-card">
           <div class="step-number">02</div>
           <div class="step-icon"><i class="fa-solid fa-file-pen"></i></div>
-          <h3>Fill Application</h3>
-          <p>Provide your personal details, academic scores, select your preferred program (B.Tech, M.Tech, MBA, MCA, BBA), and review eligibility.</p>
+          <h3>Fill the Form</h3>
+          <p>Enter personal, parent, Class X/XII and entrance exam details, choose your program and streams, and upload your documents.</p>
         </div>
 
         <div class="step-card">
           <div class="step-number">03</div>
           <div class="step-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-          <h3>Upload Marksheet</h3>
-          <p>Upload your qualifying marksheets securely (PDF or image format up to 5MB) for institutional document scrutiny.</p>
+          <h3>Pay the Fee</h3>
+          <p>Pay the application fee online. Your application ID and admission slip are emailed to you.</p>
         </div>
 
         <div class="step-card">
           <div class="step-number">04</div>
           <div class="step-icon"><i class="fa-solid fa-clipboard-check"></i></div>
-          <h3>Track & Download</h3>
-          <p>Monitor your real-time status as the IEM Admission Cell reviews and publishes your provisional selection confirmation.</p>
+          <h3>Track Your Application</h3>
+          <p>See document verification results, fix any rejected documents and check the final decision.</p>
         </div>
       </div>
 
@@ -113,8 +153,7 @@
       <div class="checklist-section mt-5">
         <div class="section-header">
           <div>
-            <span class="section-eyebrow">DOCUMENTATION PREPARATION</span>
-            <h3 class="section-title text-xl">Mandatory Documents Checklist</h3>
+                        <h3 class="section-title text-xl">Documents to Keep Ready</h3>
           </div>
         </div>
 
@@ -122,8 +161,8 @@
           <div class="checklist-item card">
             <div class="checklist-icon"><i class="fa-solid fa-graduation-cap"></i></div>
             <div class="checklist-content">
-              <h4>Academic Marksheet</h4>
-              <p>Higher Secondary (10+2) / Diploma or Graduation transcript with minimum 45% aggregate score.</p>
+              <h4>Class X and Class XII Marksheets</h4>
+              <p>Board marksheets. For M.Tech, MBA and MCA, also your graduation marksheet.</p>
               <span class="badge-req">PDF / JPG &bull; Max 5MB</span>
             </div>
           </div>
@@ -131,18 +170,18 @@
           <div class="checklist-item card">
             <div class="checklist-icon"><i class="fa-solid fa-id-card"></i></div>
             <div class="checklist-content">
-              <h4>Proof of Identity & Age</h4>
-              <p>Government-issued photo identification (Aadhaar Card, Passport, or Birth Certificate).</p>
-              <span class="badge-req">Valid Government ID</span>
+              <h4>File Format</h4>
+              <p>Each file must be a PDF, JPG or PNG, up to 5 MB.</p>
+              <span class="badge-req">PDF / JPG / PNG</span>
             </div>
           </div>
 
           <div class="checklist-item card">
             <div class="checklist-icon"><i class="fa-solid fa-award"></i></div>
             <div class="checklist-content">
-              <h4>Entrance Examination Rank Card</h4>
-              <p>Valid rank/scorecard for WBJEE, JEE Main, IEMJEE, CAT, MAT, or qualifying state entrance exam.</p>
-              <span class="badge-req">If Applicable</span>
+              <h4>Entrance Exam Scorecard</h4>
+              <p>Scorecard for each exam you enter: IEMJEE, JEE Main or WBJEE for B.Tech; IEMCET for other programs; CAT or MAT for MBA.</p>
+              <span class="badge-req">At least one</span>
             </div>
           </div>
         </div>
@@ -152,76 +191,51 @@
       <div class="faq-section mt-5">
         <div class="section-header">
           <div>
-            <span class="section-eyebrow">APPLICANT CLARIFICATIONS</span>
-            <h3 class="section-title text-xl">Frequently Asked Questions</h3>
+                        <h3 class="section-title text-xl">Frequently Asked Questions</h3>
           </div>
         </div>
 
         <div class="faq-grid">
           <div class="faq-card card">
-            <h4><i class="fa-solid fa-circle-question text-gold"></i> What is the minimum academic percentage required?</h4>
-            <p>Under AICTE and institutional norms, applicants must have secured at least 45.0% aggregate marks in their qualifying examination (10+2 or equivalent).</p>
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> What marks do I need?</h4>
+            <p>It depends on the stream. See the <strong>Courses, Eligibility &amp; Fees</strong> table above. The form checks your marks against your chosen streams.</p>
           </div>
 
           <div class="faq-card card">
-            <h4><i class="fa-solid fa-circle-question text-gold"></i> How soon will my application be reviewed?</h4>
-            <p>The IEM Admission Scrutiny Cell reviews applications on a rolling basis. Application status updates are reflected in your dashboard within 48 to 72 business hours.</p>
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> What happens if a document is rejected?</h4>
+            <p>You get an email with the reason. Replace the document from your application page and resubmit.</p>
           </div>
 
           <div class="faq-card card">
-            <h4><i class="fa-solid fa-circle-question text-gold"></i> Can I apply for multiple programs?</h4>
-            <p>Applicants may select their primary desired program during initial submission. Cross-program counseling options are available during the verification phase.</p>
+            <h4><i class="fa-solid fa-circle-question text-gold"></i> Can I choose more than one stream?</h4>
+            <p>Yes. You apply for one program and can rank up to three streams for B.Tech and two for M.Tech or Management.</p>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Important Dates & Contact Us -->
+  <!-- Contact -->
   <section id="dates" class="dates-section">
     <div class="container dates-container">
-      <div class="dates-box card">
-        <div class="box-header">
-          <i class="fa-solid fa-calendar-check text-gold"></i>
-          <h3>Admission Calendar 2026</h3>
-        </div>
-        <ul class="dates-list">
-          <li>
-            <span class="date-tag">Phase 1</span>
-            <span class="date-event">Application Window Opens</span>
-            <span class="date-value">Active Now</span>
-          </li>
-          <li>
-            <span class="date-tag">Phase 1</span>
-            <span class="date-event">First Merit List Release</span>
-            <span class="date-value">October 15, 2026</span>
-          </li>
-          <li>
-            <span class="date-tag">Phase 2</span>
-            <span class="date-event">Document Verification & Counseling</span>
-            <span class="date-value">October 25, 2026</span>
-          </li>
-        </ul>
-      </div>
-
       <div id="contact" class="contact-box card">
         <div class="box-header">
           <i class="fa-solid fa-headset text-gold"></i>
           <h3>Admission Helpline</h3>
         </div>
-        <p class="contact-desc">For any query regarding eligibility, forms, or technical assistance:</p>
+        <p class="contact-desc">For questions about eligibility or the form:</p>
         <div class="contact-details">
           <div class="contact-item">
-            <i class="fa-solid fa-envelope"></i>
-            <span>admissions&#64;iem.edu.in</span>
+            <i class="fa-solid fa-globe"></i>
+            <span>www.iem.edu.in</span>
           </div>
           <div class="contact-item">
             <i class="fa-solid fa-phone"></i>
-            <span>+91 33 2357 2059 / 2995</span>
+            <span>8010700500</span>
           </div>
           <div class="contact-item">
             <i class="fa-solid fa-location-dot"></i>
-            <span>Sector V, Salt Lake Electronics Complex, Kolkata 700091</span>
+            <span>Ashram Building, 1st Floor, GN-34/2, Sector V, Salt Lake, Kolkata 700091</span>
           </div>
         </div>
       </div>
@@ -232,7 +246,6 @@
   <footer class="iem-footer">
     <div class="container footer-content">
       <p>&copy; 2026 Institute of Engineering & Management (IEM), Kolkata. All rights reserved.</p>
-      <p class="footer-tag">Approved by AICTE &bull; Affiliated to MAKAUT &bull; Accredited by NAAC with Grade 'A'</p>
     </div>
   </footer>
 </div>

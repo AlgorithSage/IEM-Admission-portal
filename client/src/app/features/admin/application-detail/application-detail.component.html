@@ -1,0 +1,166 @@
+<div class="page">
+  <div class="container narrow">
+    <div class="head">
+      <a routerLink="/admin/dashboard" class="link-btn back">&larr; All applications</a>
+    </div>
+
+    <p *ngIf="loading() && !detail()"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+    <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
+    <div *ngIf="message()" class="alert alert-success" role="status"><i class="fa-solid fa-circle-check"></i><span>{{ message() }}</span></div>
+
+    <ng-container *ngIf="app as a">
+      <!-- Summary -->
+      <div class="card box">
+        <div class="title-row">
+          <div>
+            <h2>{{ a.fullName }}</h2>
+            <p class="muted">{{ a.applicationId || 'No application ID (fee not paid)' }} &middot; {{ a.program || a.department }}</p>
+          </div>
+          <span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status }}</span>
+        </div>
+        <p *ngIf="a.adminRemarks"><strong>Latest remarks:</strong> {{ a.adminRemarks }}</p>
+        <div class="actions" *ngIf="a.applicationId">
+          <button class="btn btn-outline btn-sm" (click)="downloadSlip()" [disabled]="busy() === 'slip'">Admission Slip</button>
+        </div>
+      </div>
+
+      <!-- Decision -->
+      <div class="card box">
+        <h3>Decision</h3>
+        <p *ngIf="!a.allowedTransitions?.length" class="muted">
+          No action available in '{{ a.status }}'.
+          <span *ngIf="a.status === 'Payment Pending'">Waiting for the applicant to pay the fee.</span>
+          <span *ngIf="a.status === 'Correction Requested'">Waiting for the applicant to replace documents and resubmit.</span>
+        </p>
+        <ng-container *ngIf="a.allowedTransitions?.length">
+          <div class="decision-row">
+            <label *ngFor="let t of a.allowedTransitions" class="radio">
+              <input type="radio" name="target" [value]="t" [(ngModel)]="targetStatus"> {{ t }}
+            </label>
+          </div>
+          <p *ngIf="targetStatus === 'Selected' && pendingOrRejectedDocs > 0" class="text-red small">
+            {{ pendingOrRejectedDocs }} document(s) are not verified yet. All documents must be verified before selecting.
+          </p>
+          <p *ngIf="targetStatus === 'Correction Requested'" class="muted small">Reject the documents that need correction first. The applicant will be emailed.</p>
+          <textarea class="form-control" rows="2" [(ngModel)]="remarks" [placeholder]="remarksRequired ? 'Remarks (required)' : 'Remarks (optional)'" aria-label="Remarks"></textarea>
+          <div class="actions">
+            <button class="btn btn-primary" (click)="applyStatus()" [disabled]="!targetStatus || busy() === 'status'">
+              {{ busy() === 'status' ? 'Saving...' : 'Apply' }}
+            </button>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Documents -->
+      <div class="card box">
+        <h3>Documents</h3>
+        <p *ngIf="!canVerify" class="muted small">Documents can be verified when the application is Submitted, in Review or On Hold.</p>
+        <table class="plain-table docs">
+          <thead><tr><th>Document</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr *ngFor="let d of a.documents">
+              <td>
+                {{ d.label }}<br>
+                <small class="muted">{{ d.originalName }} &middot; {{ (d.fileSize / 1024) | number:'1.0-1' }} KB</small>
+              </td>
+              <td>
+                <span [class.text-green]="d.verification.status === 'Verified'" [class.text-red]="d.verification.status === 'Rejected'">{{ d.verification.status }}</span>
+                <br *ngIf="d.verification.remarks"><small *ngIf="d.verification.remarks">{{ d.verification.remarks }}</small>
+              </td>
+              <td class="right">
+                <button class="link-btn" (click)="viewDocument(d)">View</button>
+                <ng-container *ngIf="canVerify">
+                  <button class="link-btn" (click)="verify(d)" [disabled]="busy() === d.key || d.verification.status === 'Verified'">Verify</button>
+                  <button class="link-btn" (click)="startReject(d)" [disabled]="busy() === d.key">Reject</button>
+                </ng-container>
+                <div *ngIf="rejectingKey() === d.key" class="reject-box">
+                  <input class="form-control" [(ngModel)]="rejectReason[d.key]" placeholder="Reason (shown to applicant)" aria-label="Reject reason">
+                  <button class="btn btn-sm btn-outline" (click)="rejectingKey.set('')">Cancel</button>
+                  <button class="btn btn-sm btn-dark" (click)="confirmReject(d)" [disabled]="busy() === d.key">Reject</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Applicant details -->
+      <div class="card box">
+        <h3>Applicant Details</h3>
+        <table class="plain-table">
+          <tr><th>Stream Preferences</th><td>{{ a.streamPreferences?.join(' > ') || '-' }}</td></tr>
+          <tr><th>Date of Birth</th><td>{{ a.dob | date:'dd MMM yyyy' }}</td></tr>
+          <tr><th>Gender / Category</th><td>{{ a.gender }} / {{ a.category || '-' }}</td></tr>
+          <tr><th>Nationality</th><td>{{ a.nationality || '-' }}</td></tr>
+          <tr><th>Email</th><td>{{ a.email }}</td></tr>
+          <tr><th>Mobile</th><td>{{ a.phone }}<span *ngIf="a.alternatePhone">, {{ a.alternatePhone }}</span></td></tr>
+          <tr><th>Address</th><td>{{ a.address }}<span *ngIf="a.city">, {{ a.city }}, {{ a.state }} - {{ a.pincode }}</span></td></tr>
+          <ng-container *ngIf="a.parents as p">
+            <tr><th>Father</th><td>{{ p.fatherName }}<span *ngIf="p.fatherPhone">, {{ p.fatherPhone }}</span><span *ngIf="p.fatherOccupation">, {{ p.fatherOccupation }}</span></td></tr>
+            <tr><th>Mother</th><td>{{ p.motherName }}<span *ngIf="p.motherPhone">, {{ p.motherPhone }}</span><span *ngIf="p.motherOccupation">, {{ p.motherOccupation }}</span></td></tr>
+            <tr *ngIf="p.guardianName"><th>Guardian</th><td>{{ p.guardianName }}<span *ngIf="p.guardianRelation"> ({{ p.guardianRelation }})</span><span *ngIf="p.guardianPhone">, {{ p.guardianPhone }}</span></td></tr>
+          </ng-container>
+          <tr *ngIf="a.classX"><th>Class X</th><td>{{ a.classX.board }}, {{ a.classX.school }}, {{ a.classX.passingYear }} - {{ a.classX.percentage }}%</td></tr>
+          <tr *ngIf="a.classXII"><th>Class XII</th><td>{{ a.classXII.board }}, {{ a.classXII.school }}, {{ a.classXII.stream }}, {{ a.classXII.passingYear }} - {{ a.classXII.percentage }}%<span *ngIf="a.classXII.pcmPercentage != null">, PCM {{ a.classXII.pcmPercentage }}%</span><span *ngIf="a.classXII.mathOrComputer">, Maths/CS studied</span></td></tr>
+          <tr *ngIf="a.graduation"><th>Graduation</th><td>{{ a.graduation.degree }}, {{ a.graduation.university }}, {{ a.graduation.passingYear }} - {{ a.graduation.percentage }}%</td></tr>
+          <tr *ngFor="let e of a.competitiveExams"><th>{{ examLabel(e.exam) }} {{ e.year }}</th><td>Roll {{ e.rollNumber }}<span *ngIf="e.rank">, Rank {{ e.rank | number }}</span>, {{ scoreLabel(e.exam) }} {{ e.score }}</td></tr>
+        </table>
+      </div>
+
+      <!-- Payment -->
+      <div class="card box">
+        <h3>Payment</h3>
+        <p *ngIf="!detail()?.payments?.length" class="muted">No payment attempts yet.</p>
+        <table class="plain-table list" *ngIf="detail()?.payments?.length">
+          <thead><tr><th>Order</th><th>Status</th><th>Amount</th><th>Payment ID</th><th>Method</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of detail()?.payments">
+              <td>{{ p.orderId }}</td>
+              <td>{{ p.status }}<br *ngIf="p.failureReason"><small *ngIf="p.failureReason" class="muted">{{ p.failureReason }}</small></td>
+              <td>Rs. {{ p.amount / 100 | number }}</td>
+              <td>{{ p.paymentId || '-' }}</td>
+              <td>{{ p.method || '-' }}</td>
+              <td>{{ (p.paidAt || p.createdAt) | date:'dd MMM yyyy, h:mm a' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card box">
+        <h3>Emails Sent</h3>
+        <p *ngIf="!detail()?.notifications?.length" class="muted">No emails yet.</p>
+        <table class="plain-table list" *ngIf="detail()?.notifications?.length">
+          <thead><tr><th>Date</th><th>Subject</th><th>Delivery</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let n of detail()?.notifications">
+              <td>{{ n.createdAt | date:'dd MMM, h:mm a' }}</td>
+              <td>{{ n.subject }}<span *ngIf="n.attachments?.length" class="muted"> (+ {{ n.attachments[0].filename }})</span></td>
+              <td>
+                <span [class.text-green]="n.status === 'Sent'" [class.text-red]="n.status === 'Failed'">{{ n.status }}</span>
+                <small class="muted"> {{ n.transport }}, {{ n.attempts }} attempt(s)</small>
+                <br *ngIf="n.lastError"><small *ngIf="n.lastError" class="text-red">{{ n.lastError }}</small>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Audit -->
+      <div class="card box">
+        <h3>Audit Log</h3>
+        <table class="plain-table list">
+          <thead><tr><th>Date</th><th>By</th><th>Action</th><th>Details</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let e of detail()?.auditLog">
+              <td>{{ e.createdAt | date:'dd MMM, h:mm:ss a' }}</td>
+              <td>{{ e.actorRole }}</td>
+              <td>{{ e.action }}<span *ngIf="e.toStatus"> ({{ e.fromStatus }} &rarr; {{ e.toStatus }})</span></td>
+              <td>{{ e.details }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </div>
+</div>

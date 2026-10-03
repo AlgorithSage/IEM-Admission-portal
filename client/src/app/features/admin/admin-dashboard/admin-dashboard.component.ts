@@ -1,10 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ApplicationService } from '../../../core/services/application.service';
+import { Subject, Subscription, debounceTime } from 'rxjs';
+import { ApplicationService, ListFilter } from '../../../core/services/application.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Application, AdminStats, ApplicationStatus, DepartmentType } from '../../../models/application.model';
+import { AdminStats, APPLICATION_STATUSES, ApplicationListItem, ApplicationStatus } from '../../../models/application.model';
+import { DEPARTMENTS } from '../../../models/admission-rules';
+import { apiError, downloadBlob, errorMessage } from '../../../core/utils/file.util';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -13,115 +16,115 @@ import { Application, AdminStats, ApplicationStatus, DepartmentType } from '../.
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-export class AdminDashboardComponent implements OnInit {
-  applications: Application[] = [];
-  stats: AdminStats | null = null;
-  loading = true;
-  updatingId: string | null = null;
+export class AdminDashboardComponent implements OnInit, OnDestroy {
+  // Signals: state set in HTTP callbacks must notify OnPush/zoneless change detection (Angular 22)
+  readonly stats = signal<AdminStats | null>(null);
+  readonly applications = signal<ApplicationListItem[]>([]);
+  readonly total = signal(0);
+  readonly pages = signal(1);
+  readonly loading = signal(true);
+  readonly exporting = signal(false);
+  readonly error = signal('');
 
-  // Filter states
-  searchQuery = '';
-  selectedStatus = 'All';
-  selectedDepartment = 'All';
+  search = '';
+  status = 'All';
+  department = 'All';
+  page = 1;
+  readonly limit = 20;
 
-  // State Transition Modal State
-  selectedAppForTransition: Application | null = null;
-  targetStatus: ApplicationStatus | null = null;
-  transitionRemarks = '';
-  transitionError = '';
-  transitionSuccess = '';
+  readonly statuses = APPLICATION_STATUSES;
+  readonly departments = DEPARTMENTS;
 
-  statusOptions: string[] = ['All', 'Submitted', 'Review', 'Selected', 'Rejected'];
-  departmentOptions: string[] = ['All', 'B.Tech', 'M.Tech', 'MBA', 'MCA', 'BBA'];
+  private search$ = new Subject<void>();
+  private searchSub?: Subscription;
 
-  constructor(
-    private applicationService: ApplicationService,
-    public authService: AuthService
-  ) {}
+  constructor(private applicationService: ApplicationService, public authService: AuthService) {}
 
   ngOnInit(): void {
-    this.loadData();
-  }
-
-  loadData(): void {
-    this.loading = true;
-    this.loadStats();
-    this.loadApplications();
-  }
-
-  loadStats(): void {
-    this.applicationService.getAdminStats().subscribe({
-      next: (res) => {
-        this.stats = res.stats;
-      }
+    this.searchSub = this.search$.pipe(debounceTime(350)).subscribe(() => {
+      this.page = 1;
+      this.loadApplications();
     });
+    this.refresh();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSub?.unsubscribe();
+  }
+
+  private get filter(): ListFilter {
+    return { search: this.search.trim(), status: this.status, department: this.department, page: this.page, limit: this.limit };
+  }
+
+  refresh(): void {
+    this.applicationService.getAdminStats().subscribe({
+      next: (stats) => this.stats.set(stats),
+      error: (err) => this.error.set(apiError(err, 'Could not load statistics.'))
+    });
+    this.loadApplications();
   }
 
   loadApplications(): void {
-    this.applicationService.getApplications({
-      status: this.selectedStatus,
-      department: this.selectedDepartment,
-      search: this.searchQuery
-    }).subscribe({
+    this.loading.set(true);
+    this.error.set('');
+    this.applicationService.getApplications(this.filter).subscribe({
       next: (res) => {
-        this.applications = res.applications;
-        this.loading = false;
+        this.applications.set(res.applications);
+        this.total.set(res.total);
+        this.pages.set(Math.max(1, res.pages));
+        this.loading.set(false);
       },
-      error: () => {
-        this.loading = false;
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(apiError(err, 'Could not load applications.'));
       }
     });
+  }
+
+  onSearchInput(): void {
+    this.search$.next();
   }
 
   onFilterChange(): void {
+    this.page = 1;
     this.loadApplications();
   }
 
-  // POC 3: Status State Machine Transition Handler
-  openTransitionModal(app: Application, nextStatus: ApplicationStatus): void {
-    this.selectedAppForTransition = app;
-    this.targetStatus = nextStatus;
-    this.transitionRemarks = nextStatus === 'Selected' ? 'Cleared academic and document scrutiny' : (nextStatus === 'Rejected' ? 'Criteria not satisfied' : 'Under scrutiny');
-    this.transitionError = '';
-    this.transitionSuccess = '';
+  showStatus(status: string): void {
+    this.status = status;
+    this.onFilterChange();
   }
 
-  closeModal(): void {
-    this.selectedAppForTransition = null;
-    this.targetStatus = null;
-    this.transitionRemarks = '';
-    this.transitionError = '';
-    this.transitionSuccess = '';
+  goTo(page: number): void {
+    if (page < 1 || page > this.pages()) return;
+    this.page = page;
+    this.loadApplications();
   }
 
-  confirmTransition(): void {
-    if (!this.selectedAppForTransition || !this.targetStatus) return;
+  countOf(status: ApplicationStatus): number {
+    return this.stats()?.byStatus.find((s) => s._id === status)?.count || 0;
+  }
 
-    const appId = this.selectedAppForTransition._id;
-    this.updatingId = appId;
-    this.transitionError = '';
+  trackById(_: number, item: ApplicationListItem): string {
+    return item._id;
+  }
 
-    this.applicationService.updateStatus(appId, this.targetStatus, this.transitionRemarks).subscribe({
-      next: (res) => {
-        this.updatingId = null;
-        this.transitionSuccess = `Status successfully transitioned to ${this.targetStatus}!`;
-        setTimeout(() => {
-          this.closeModal();
-          this.loadData();
-        }, 1000);
+  statusClass(status: string): string {
+    return 'status-' + status.toLowerCase().replace(' ', '-');
+  }
+
+  exportCsv(): void {
+    this.exporting.set(true);
+    const { page, limit, ...filter } = this.filter;
+    this.applicationService.exportReport(filter).subscribe({
+      next: (blob) => {
+        this.exporting.set(false);
+        downloadBlob(blob, `applications-${new Date().toISOString().slice(0, 10)}.csv`);
       },
-      error: (err) => {
-        this.updatingId = null;
-        this.transitionError = err.error?.message || `Server rejected transition: Illegal state change.`;
+      error: async (err) => {
+        this.exporting.set(false);
+        this.error.set(await errorMessage(err, 'Could not export the report.'));
       }
     });
-  }
-
-  getStatusCount(statusName: ApplicationStatus): number {
-    return this.stats?.byStatus.find(s => s._id === statusName)?.count || 0;
-  }
-
-  getDepartmentCount(deptName: DepartmentType): number {
-    return this.stats?.byDepartment.find(d => d._id === deptName)?.count || 0;
   }
 }

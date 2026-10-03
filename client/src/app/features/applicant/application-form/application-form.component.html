@@ -16,100 +16,158 @@
       </a>
     </div>
 
-
     <!-- Existing Application Alert -->
-    <div *ngIf="alreadySubmittedApp" class="alert alert-info">
+    <div *ngIf="alreadySubmittedApp() as existing" class="alert alert-info">
       <i class="fa-solid fa-circle-info"></i>
       <div style="flex: 1;">
-        <strong>Application Already On File:</strong> You have already submitted an application for <strong>{{ alreadySubmittedApp.department }}</strong> (Current Status: <strong>{{ alreadySubmittedApp.status }}</strong>).
+        You already have an application for {{ existing.program || existing.department }} (status: <strong>{{ existing.status }}</strong>).
       </div>
-      <a routerLink="/applicant/status" class="btn btn-sm btn-dark">View Tracker</a>
+      <a *ngIf="existing.status === 'Payment Pending'" routerLink="/applicant/payment" class="btn btn-sm btn-primary">Pay Fee</a>
+      <a *ngIf="existing.status !== 'Payment Pending'" routerLink="/applicant/status" class="btn btn-sm btn-dark">View Status</a>
     </div>
 
-    <!-- Alert Messages -->
-    <div *ngIf="successMessage" class="alert alert-success">
-      <i class="fa-solid fa-circle-check"></i>
-      <span>{{ successMessage }} Redirecting to Status Tracker...</span>
+    <div *ngIf="draftRestored && step === 'form' && !alreadySubmittedApp()" class="alert alert-info">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span>Your saved draft was restored. Please attach the documents again before reviewing.</span>
     </div>
 
-    <div *ngIf="errorMessage" class="alert alert-error">
+    <div *ngIf="errorMessage()" class="alert alert-error" role="alert">
       <i class="fa-solid fa-circle-exclamation"></i>
-      <span>{{ errorMessage }}</span>
+      <span>{{ errorMessage() }}</span>
     </div>
+
+    <!-- Reusable upload widget -->
+    <ng-template #uploader let-field="field" let-title="title" let-hint="hint">
+      <div class="upload-block">
+        <div class="upload-block-head">
+          <span class="form-label mb-0">{{ title }} <span class="required">*</span></span>
+          <span class="upload-hint">{{ hint }}</span>
+        </div>
+
+        <div
+          *ngIf="!fileFor(field)"
+          class="upload-dropzone compact"
+          [class.has-error]="fileErrorFor(field)"
+          (drop)="onFileDrop(field, $event)"
+          (dragover)="onDragOver($event)">
+          <input
+            type="file"
+            [id]="'file-' + field"
+            class="file-hidden-input"
+            (change)="onFileSelected(field, $event)"
+            accept=".pdf,.png,.jpg,.jpeg">
+          <label [for]="'file-' + field" class="dropzone-label">
+            <div class="upload-icon">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h4>Click to browse or drag &amp; drop</h4>
+            <p>PDF, PNG, JPG &bull; Max 5MB</p>
+          </label>
+        </div>
+
+        <div *ngIf="fileFor(field) as f" class="uploaded-pill">
+          <div class="file-info-box">
+            <i class="fa-solid" [ngClass]="f.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file-image'"></i>
+            <div>
+              <span class="file-name">{{ f.name }}</span>
+              <span class="file-meta">
+                {{ (f.size / 1024) | number:'1.0-1' }} KB &bull;
+                <ng-container [ngSwitch]="uploadStatus(field)">
+                  <span *ngSwitchCase="'uploading'"><i class="fa-solid fa-spinner fa-spin"></i> Uploading...</span>
+                  <span *ngSwitchCase="'done'" class="text-green">Uploaded</span>
+                  <span *ngSwitchCase="'error'" class="text-red">Upload failed</span>
+                </ng-container>
+              </span>
+            </div>
+          </div>
+          <button type="button" class="btn-remove-file" (click)="removeFile(field)" [attr.aria-label]="'Remove ' + title">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+
+        <div *ngIf="fileErrorFor(field)" class="bva-feedback invalid">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span class="bva-text">{{ fileErrorFor(field) }}</span>
+        </div>
+      </div>
+    </ng-template>
 
     <!-- Main Form Card -->
-    <div class="form-card card">
-      <form [formGroup]="appForm" (ngSubmit)="onSubmit()">
-        <!-- SECTION 1: Personal Details -->
+    <div class="form-card card" [hidden]="step !== 'form'">
+      <form [formGroup]="appForm" (ngSubmit)="onReview()" novalidate>
+
+        <!-- SECTION: Program & Stream -->
         <div class="form-section">
           <div class="section-title-wrap">
-            <span class="section-num">1</span>
-            <h3>Personal & Contact Information</h3>
+            <span class="section-num"></span>
+            <h3>Program &amp; Stream</h3>
           </div>
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label">Full Name <span class="required">*</span></label>
-              <input 
-                type="text" 
-                class="form-control" 
-                formControlName="fullName" 
-                placeholder="Candidate's full name (e.g. Aarav Sharma)"
-                [class.is-invalid]="fullNameFeedback && !fullNameFeedback.isValid"
-                [class.is-valid]="fullNameFeedback && fullNameFeedback.isValid">
-              <div *ngIf="fullNameFeedback && !fullNameFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ fullNameFeedback.message }}</span>
+              <label class="form-label" for="program">Applying For <span class="required">*</span></label>
+              <select id="program" class="form-control" formControlName="program" [class.is-invalid]="err('program')">
+                <option value="" disabled>Select program</option>
+                <option *ngFor="let p of programs" [value]="p.name">{{ p.name }}</option>
+              </select>
+              <div *ngIf="err('program') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+
+            <ng-container formGroupName="streamPrefs">
+              <div class="form-group" *ngFor="let slot of prefSlots; trackBy: trackByKey">
+                <label class="form-label" [for]="slot.key">
+                  {{ slot.ordinal }} Stream Preference <span *ngIf="slot.required" class="required">*</span>
+                </label>
+                <select [id]="slot.key" class="form-control" [formControlName]="slot.key" [class.is-invalid]="err(['streamPrefs', slot.key])">
+                  <option value="">{{ slot.required ? 'Select stream' : 'None' }}</option>
+                  <option *ngFor="let st of streamOptionsFor(slot.key); trackBy: trackByValue" [value]="st">{{ st }}</option>
+                </select>
+                <div *ngIf="err(['streamPrefs', slot.key]) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
               </div>
+            </ng-container>
+          </div>
+
+          <ul *ngIf="chosenStreams.length" class="stream-notes">
+            <li *ngFor="let c of chosenStreams; trackBy: trackByStream">
+              <strong>{{ c.stream.name }}</strong>: minimum Class X {{ c.stream.eligibility.classX }}%, XII {{ c.stream.eligibility.classXII }}%<span *ngIf="c.stream.eligibility.pcm">, PCM {{ c.stream.eligibility.pcm }}%</span><span *ngIf="c.stream.eligibility.graduation">, Graduation {{ c.stream.eligibility.graduation }}%</span>
+              <span *ngIf="c.reasons.length && (submitAttempted || appForm.get('classXII.percentage')?.dirty)" class="stream-ineligible">
+                Not eligible: needs {{ c.reasons.join(', ') }}
+              </span>
+            </li>
+          </ul>
+
+          <div *ngIf="formError('duplicateStream')" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span class="bva-text">Each stream preference must be different.</span>
+          </div>
+        </div>
+
+        <!-- SECTION: Personal Information -->
+        <div class="form-section">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Personal Information</h3>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="fullName">Full Name <span class="required">*</span></label>
+              <input id="fullName" type="text" class="form-control" formControlName="fullName"
+                placeholder="As on Class X certificate (e.g. Aarav Sharma)"
+                [class.is-invalid]="err('fullName')" [class.is-valid]="isValid('fullName')">
+              <div *ngIf="err('fullName') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Email Address <span class="required">*</span></label>
-              <input 
-                type="email" 
-                class="form-control" 
-                formControlName="email" 
-                placeholder="student@example.com"
-                [class.is-invalid]="emailFeedback && !emailFeedback.isValid"
-                [class.is-valid]="emailFeedback && emailFeedback.isValid">
-              <div *ngIf="emailFeedback && !emailFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ emailFeedback.message }}</span>
-              </div>
+              <label class="form-label" for="dob">Date of Birth <span class="required">*</span></label>
+              <input id="dob" type="date" class="form-control" formControlName="dob"
+                [class.is-invalid]="err('dob')" [class.is-valid]="isValid('dob')">
+              <div *ngIf="err('dob') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Mobile Number <span class="required">*</span></label>
-              <input 
-                type="tel" 
-                class="form-control" 
-                formControlName="phone" 
-                placeholder="+91 98765 43210"
-                [class.is-invalid]="phoneFeedback && !phoneFeedback.isValid"
-                [class.is-valid]="phoneFeedback && phoneFeedback.isValid">
-              <div *ngIf="phoneFeedback && !phoneFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ phoneFeedback.message }}</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Date of Birth <span class="required">*</span></label>
-              <input 
-                type="date" 
-                class="form-control" 
-                formControlName="dob"
-                [class.is-invalid]="dobFeedback && !dobFeedback.isValid"
-                [class.is-valid]="dobFeedback && dobFeedback.isValid">
-              <div *ngIf="dobFeedback && !dobFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ dobFeedback.message }}</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Gender <span class="required">*</span></label>
-              <select class="form-control" formControlName="gender">
+              <label class="form-label" for="gender">Gender <span class="required">*</span></label>
+              <select id="gender" class="form-control" formControlName="gender">
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
@@ -117,166 +175,477 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Permanent Address <span class="required">*</span></label>
-              <input 
-                type="text" 
-                class="form-control" 
-                formControlName="address" 
-                placeholder="Street address, City, State, PIN"
-                [class.is-invalid]="addressFeedback && !addressFeedback.isValid"
-                [class.is-valid]="addressFeedback && addressFeedback.isValid">
-              <div *ngIf="addressFeedback && !addressFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ addressFeedback.message }}</span>
-              </div>
+              <label class="form-label" for="category">Category <span class="required">*</span></label>
+              <select id="category" class="form-control" formControlName="category">
+                <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+              </select>
+              <span class="field-hint">Certificate may be requested at document verification.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nationality">Nationality <span class="required">*</span></label>
+              <input id="nationality" type="text" class="form-control" formControlName="nationality"
+                [class.is-invalid]="err('nationality')">
+              <div *ngIf="err('nationality') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+          </div>
+
+          <h4 class="subsection-title">Contact Details</h4>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address <span class="required">*</span></label>
+              <input id="email" type="email" class="form-control" formControlName="email" placeholder="student@example.com"
+                [class.is-invalid]="err('email')" [class.is-valid]="isValid('email')">
+              <div *ngIf="err('email') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="phone">Mobile Number <span class="required">*</span></label>
+              <input id="phone" type="tel" class="form-control" formControlName="phone" placeholder="98765 43210"
+                [class.is-invalid]="err('phone')" [class.is-valid]="isValid('phone')">
+              <div *ngIf="err('phone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="alternatePhone">Alternate Mobile Number</label>
+              <input id="alternatePhone" type="tel" class="form-control" formControlName="alternatePhone" placeholder="Optional"
+                [class.is-invalid]="err('alternatePhone')">
+              <div *ngIf="err('alternatePhone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
           </div>
         </div>
 
-        <!-- SECTION 2: Academic Details & Program Choice -->
+        <!-- SECTION: Address -->
         <div class="form-section">
           <div class="section-title-wrap">
-            <span class="section-num">2</span>
-            <h3>Academic Qualifications & Program Choice</h3>
+            <span class="section-num"></span>
+            <h3>Permanent Address</h3>
           </div>
 
           <div class="form-grid-2">
+            <div class="form-group span-2">
+              <label class="form-label" for="address">Address Line <span class="required">*</span></label>
+              <input id="address" type="text" class="form-control" formControlName="address" placeholder="House / flat no., street, locality"
+                [class.is-invalid]="err('address')" [class.is-valid]="isValid('address')">
+              <div *ngIf="err('address') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+
             <div class="form-group">
-              <label class="form-label">Desired Program / Department <span class="required">*</span></label>
-              <select class="form-control" formControlName="department">
-                <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+              <label class="form-label" for="city">City / Town <span class="required">*</span></label>
+              <input id="city" type="text" class="form-control" formControlName="city" placeholder="e.g. Kolkata"
+                [class.is-invalid]="err('city')" [class.is-valid]="isValid('city')">
+              <div *ngIf="err('city') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="state">State / UT <span class="required">*</span></label>
+              <select id="state" class="form-control" formControlName="state">
+                <option *ngFor="let s of states" [value]="s">{{ s }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Qualifying Examination <span class="required">*</span></label>
-              <input 
-                type="text" 
-                class="form-control" 
-                formControlName="qualifyingExam" 
-                placeholder="e.g. Higher Secondary (10+2) / JEE / CAT"
-                [class.is-invalid]="appForm.get('qualifyingExam')?.touched && appForm.get('qualifyingExam')?.invalid">
-              <div *ngIf="appForm.get('qualifyingExam')?.touched && appForm.get('qualifyingExam')?.invalid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">Qualifying examination name is required.</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Passing Year <span class="required">*</span></label>
-              <input 
-                type="number" 
-                class="form-control" 
-                formControlName="passingYear"
-                placeholder="e.g. 2026"
-                [class.is-invalid]="passingYearFeedback && !passingYearFeedback.isValid"
-                [class.is-valid]="passingYearFeedback && passingYearFeedback.isValid">
-              <div *ngIf="passingYearFeedback && !passingYearFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ passingYearFeedback.message }}</span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Aggregate Percentage / Marks (%) <span class="required">*</span></label>
-              <input 
-                type="number" 
-                step="0.1" 
-                class="form-control" 
-                formControlName="percentage" 
-                placeholder="e.g. 88.5"
-                [class.is-invalid]="percentageFeedback && !percentageFeedback.isValid"
-                [class.is-valid]="percentageFeedback && percentageFeedback.isValid">
-              <div *ngIf="percentageFeedback && !percentageFeedback.isValid" class="bva-feedback invalid">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span class="bva-text">{{ percentageFeedback.message }}</span>
-              </div>
+              <label class="form-label" for="pincode">PIN Code <span class="required">*</span></label>
+              <input id="pincode" type="text" inputmode="numeric" maxlength="6" class="form-control" formControlName="pincode" placeholder="700091"
+                [class.is-invalid]="err('pincode')" [class.is-valid]="isValid('pincode')">
+              <div *ngIf="err('pincode') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
           </div>
         </div>
 
-        <!-- SECTION 3: Document Upload -->
-        <div class="form-section">
+        <!-- SECTION: Parent / Guardian -->
+        <div class="form-section" formGroupName="parents">
           <div class="section-title-wrap">
-            <span class="section-num">3</span>
-            <h3>Document Upload (Marksheet / Certificate)</h3>
+            <span class="section-num"></span>
+            <h3>Parent / Guardian Details</h3>
           </div>
 
-          <div 
-            class="upload-dropzone" 
-            (drop)="onFileDrop($event)" 
-            (dragover)="onDragOver($event)"
-            *ngIf="!selectedFile">
-            <input 
-              type="file" 
-              id="fileInput" 
-              class="file-hidden-input" 
-              (change)="onFileSelected($event)" 
-              accept=".pdf,.png,.jpg,.jpeg">
-            <label for="fileInput" class="dropzone-label">
-              <div class="upload-icon">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-              </div>
-              <h4>Click to browse or drag & drop marksheet here</h4>
-              <p>Supported Formats: PDF, PNG, JPG (Maximum size: 5MB)</p>
-              <span class="btn btn-outline btn-sm">Choose File</span>
-            </label>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="fatherName">Father's Name <span class="required">*</span></label>
+              <input id="fatherName" type="text" class="form-control" formControlName="fatherName"
+                [class.is-invalid]="err('parents.fatherName')" [class.is-valid]="isValid('parents.fatherName')">
+              <div *ngIf="err('parents.fatherName') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fatherPhone">Father's Contact Number</label>
+              <input id="fatherPhone" type="tel" class="form-control" formControlName="fatherPhone"
+                [class.is-invalid]="err('parents.fatherPhone')">
+              <div *ngIf="err('parents.fatherPhone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fatherOccupation">Father's Occupation</label>
+              <input id="fatherOccupation" type="text" class="form-control" formControlName="fatherOccupation" placeholder="Optional">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="motherName">Mother's Name <span class="required">*</span></label>
+              <input id="motherName" type="text" class="form-control" formControlName="motherName"
+                [class.is-invalid]="err('parents.motherName')" [class.is-valid]="isValid('parents.motherName')">
+              <div *ngIf="err('parents.motherName') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="motherPhone">Mother's Contact Number</label>
+              <input id="motherPhone" type="tel" class="form-control" formControlName="motherPhone"
+                [class.is-invalid]="err('parents.motherPhone')">
+              <div *ngIf="err('parents.motherPhone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="motherOccupation">Mother's Occupation</label>
+              <input id="motherOccupation" type="text" class="form-control" formControlName="motherOccupation" placeholder="Optional">
+            </div>
           </div>
 
-          <!-- Uploaded File Pill -->
-          <div *ngIf="selectedFile" class="uploaded-pill">
-            <div class="file-info-box">
-              <i class="fa-solid fa-file-pdf text-gold"></i>
-              <div>
-                <span class="file-name">{{ selectedFile.name }}</span>
-                <span class="file-meta">
-                  {{ (selectedFile.size / 1024) | number:'1.0-1' }} KB &bull; {{ selectedFile.type }}
-                </span>
+          <div *ngIf="formError('parentContact')" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span class="bva-text">Provide at least one parent contact number (father's or mother's).</span>
+          </div>
+
+          <h4 class="subsection-title">Local Guardian <span class="optional-tag">Optional</span></h4>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="guardianName">Guardian's Name</label>
+              <input id="guardianName" type="text" class="form-control" formControlName="guardianName"
+                [class.is-invalid]="err('parents.guardianName')">
+              <div *ngIf="err('parents.guardianName') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="guardianRelation">Relation</label>
+              <input id="guardianRelation" type="text" class="form-control" formControlName="guardianRelation" placeholder="e.g. Uncle">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="guardianPhone">Guardian's Contact Number</label>
+              <input id="guardianPhone" type="tel" class="form-control" formControlName="guardianPhone"
+                [class.is-invalid]="err('parents.guardianPhone')">
+              <div *ngIf="err('parents.guardianPhone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: Class X -->
+        <div class="form-section" formGroupName="classX">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Class X (Secondary) Details</h3>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="xBoard">Board <span class="required">*</span></label>
+              <select id="xBoard" class="form-control" formControlName="board" [class.is-invalid]="err('classX.board')">
+                <option value="" disabled>Select board</option>
+                <option *ngFor="let b of boards" [value]="b">{{ b }}</option>
+              </select>
+              <div *ngIf="err('classX.board') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xSchool">School Name <span class="required">*</span></label>
+              <input id="xSchool" type="text" class="form-control" formControlName="school"
+                [class.is-invalid]="err('classX.school')" [class.is-valid]="isValid('classX.school')">
+              <div *ngIf="err('classX.school') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xYear">Passing Year <span class="required">*</span></label>
+              <input id="xYear" type="number" class="form-control" formControlName="passingYear"
+                [min]="rules.classX.year.min" [max]="rules.classX.year.max"
+                [class.is-invalid]="err('classX.passingYear')" [class.is-valid]="isValid('classX.passingYear')">
+              <div *ngIf="err('classX.passingYear') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xPct">Aggregate Percentage (%) <span class="required">*</span></label>
+              <input id="xPct" type="number" step="0.01" class="form-control" formControlName="percentage" placeholder="e.g. 88.40"
+                [min]="rules.classX.percentage.min" max="100"
+                [class.is-invalid]="err('classX.percentage')" [class.is-valid]="isValid('classX.percentage')">
+              <span class="field-hint">Range {{ rules.classX.percentage.min }}–100, up to 2 decimals</span>
+              <div *ngIf="err('classX.percentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+          </div>
+
+          <ng-container *ngTemplateOutlet="uploader; context: { field: 'classXMarksheet', title: 'Class X Marksheet', hint: 'Board-issued marksheet' }"></ng-container>
+        </div>
+
+        <!-- SECTION: Class XII -->
+        <div class="form-section" formGroupName="classXII">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Class XII (Higher Secondary) Details</h3>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="xiiBoard">Board <span class="required">*</span></label>
+              <select id="xiiBoard" class="form-control" formControlName="board" [class.is-invalid]="err('classXII.board')">
+                <option value="" disabled>Select board</option>
+                <option *ngFor="let b of boards" [value]="b">{{ b }}</option>
+              </select>
+              <div *ngIf="err('classXII.board') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xiiSchool">School / College Name <span class="required">*</span></label>
+              <input id="xiiSchool" type="text" class="form-control" formControlName="school"
+                [class.is-invalid]="err('classXII.school')" [class.is-valid]="isValid('classXII.school')">
+              <div *ngIf="err('classXII.school') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xiiStream">Stream <span class="required">*</span></label>
+              <select id="xiiStream" class="form-control" formControlName="stream">
+                <option *ngFor="let s of streams" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xiiYear">Passing Year <span class="required">*</span></label>
+              <input id="xiiYear" type="number" class="form-control" formControlName="passingYear"
+                [min]="rules.classXII.year.min" [max]="rules.classXII.year.max"
+                [class.is-invalid]="err('classXII.passingYear') || formError('yearGap')" [class.is-valid]="isValid('classXII.passingYear') && !formError('yearGap')">
+              <div *ngIf="err('classXII.passingYear') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+              <div *ngIf="!err('classXII.passingYear') && formError('yearGap')" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">Class XII must be passed at least {{ rules.minYearGap }} years after Class X.</span>
               </div>
             </div>
-            <button type="button" class="btn-remove-file" (click)="removeFile()" title="Remove file">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
+            <div class="form-group">
+              <label class="form-label" for="xiiPct">Aggregate Percentage (%) <span class="required">*</span></label>
+              <input id="xiiPct" type="number" step="0.01" class="form-control" formControlName="percentage" placeholder="e.g. 91.25"
+                [min]="rules.classXII.percentage.min" max="100"
+                [class.is-invalid]="err('classXII.percentage')" [class.is-valid]="isValid('classXII.percentage')">
+              <span class="field-hint">Minimum {{ rules.classXII.percentage.min }}% for eligibility</span>
+              <div *ngIf="err('classXII.percentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="xiiPcm">Physics, Chemistry &amp; Maths (%)</label>
+              <input id="xiiPcm" type="number" step="0.01" min="0" max="100" class="form-control" formControlName="pcmPercentage" placeholder="Optional — for B.Tech"
+                [class.is-invalid]="err('classXII.pcmPercentage')">
+              <div *ngIf="err('classXII.pcmPercentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
           </div>
 
-          <!-- Document Ready Note -->
-          <div *ngIf="selectedFile" class="file-ready-alert mt-2">
-            <i class="fa-solid fa-circle-check text-green"></i>
-            <span>Document verified and attached. Click <strong>Submit Application & Save to Database</strong> below to complete your admission application.</span>
+          <label *ngIf="needsClassXIISubject" class="check-line">
+            <input type="checkbox" formControlName="mathOrComputer">
+            I studied Maths / Business Maths / Computer Application / Computer Science in Class XII
+          </label>
+
+          <ng-container *ngTemplateOutlet="uploader; context: { field: 'classXIIMarksheet', title: 'Class XII Marksheet', hint: 'Board-issued or provisional marksheet' }"></ng-container>
+        </div>
+
+        <!-- SECTION: Graduation (PG programs only) -->
+        <div *ngIf="needsGraduation" class="form-section" formGroupName="graduation">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Graduation Details</h3>
           </div>
 
-          <div *ngIf="fileFeedback && !fileFeedback.isValid" class="bva-feedback invalid mt-2">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="gDegree">Degree <span class="required">*</span></label>
+              <input id="gDegree" type="text" class="form-control" formControlName="degree" placeholder="e.g. B.Tech, B.Sc, BCA"
+                [class.is-invalid]="err('graduation.degree')">
+              <div *ngIf="err('graduation.degree') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="gUni">University / College <span class="required">*</span></label>
+              <input id="gUni" type="text" class="form-control" formControlName="university"
+                [class.is-invalid]="err('graduation.university')">
+              <div *ngIf="err('graduation.university') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="gYear">Passing Year <span class="required">*</span></label>
+              <input id="gYear" type="number" class="form-control" formControlName="passingYear"
+                [class.is-invalid]="err('graduation.passingYear') || formError('graduationGap')">
+              <div *ngIf="err('graduation.passingYear') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+              <div *ngIf="!err('graduation.passingYear') && formError('graduationGap')" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">Graduation must be at least {{ rules.minGraduationGap }} years after Class XII.</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="gPct">Percentage (%) <span class="required">*</span></label>
+              <input id="gPct" type="number" step="0.01" min="0" max="100" class="form-control" formControlName="percentage"
+                [class.is-invalid]="err('graduation.percentage')">
+              <div *ngIf="err('graduation.percentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+            </div>
+          </div>
+
+          <ng-container *ngTemplateOutlet="uploader; context: { field: 'graduationMarksheet', title: 'Graduation Marksheet', hint: 'Final or consolidated marksheet' }"></ng-container>
+        </div>
+
+        <!-- SECTION: Competitive Exams -->
+        <div class="form-section" formGroupName="exams">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Competitive Entrance Exams</h3>
+          </div>
+          <p class="section-intro" *ngIf="!selectedProgram">Select a program first to see the accepted entrance exams.</p>
+          <p class="section-intro" *ngIf="selectedProgram">
+            Accepted for {{ selectedProgram.name }}: {{ acceptedExamLabels }}. Fill in <strong>at least one</strong>.
+          </p>
+
+          <div class="exam-list">
+            <div *ngFor="let exam of acceptedExams; trackBy: trackExam" class="exam-card" [class.active]="isExamSelected(exam.code)" [formGroupName]="exam.code">
+              <label class="exam-toggle">
+                <input type="checkbox" formControlName="selected">
+                <span class="exam-toggle-text">
+                  <strong>{{ exam.label }}</strong>
+                  <small>{{ exam.conductedBy }}</small>
+                </span>
+                <span class="exam-limits">
+                  <ng-container *ngIf="exam.rank">Rank 1–{{ exam.rank.max | number }} &bull; </ng-container>{{ exam.score.label }} {{ exam.score.min }} to {{ exam.score.max }}
+                </span>
+              </label>
+
+              <div *ngIf="isExamSelected(exam.code)" class="exam-body">
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label class="form-label" [for]="exam.code + '-roll'">Roll / Application No. <span class="required">*</span></label>
+                    <input [id]="exam.code + '-roll'" type="text" class="form-control" formControlName="rollNumber"
+                      [class.is-invalid]="err(['exams', exam.code, 'rollNumber'])">
+                    <div *ngIf="err(['exams', exam.code, 'rollNumber']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" [for]="exam.code + '-year'">Exam Year <span class="required">*</span></label>
+                    <input [id]="exam.code + '-year'" type="number" class="form-control" formControlName="year"
+                      [min]="rules.examYear.min" [max]="rules.examYear.max"
+                      [class.is-invalid]="err(['exams', exam.code, 'year'])">
+                    <div *ngIf="err(['exams', exam.code, 'year']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+                  </div>
+                  <div class="form-group" *ngIf="exam.rank">
+                    <label class="form-label" [for]="exam.code + '-rank'">Rank <span class="required">*</span></label>
+                    <input [id]="exam.code + '-rank'" type="number" step="1" class="form-control" formControlName="rank"
+                      [min]="exam.rank!.min" [max]="exam.rank!.max" [placeholder]="'1 – ' + (exam.rank!.max | number)"
+                      [class.is-invalid]="err(['exams', exam.code, 'rank'])" [class.is-valid]="isValid(['exams', exam.code, 'rank'])">
+                    <div *ngIf="err(['exams', exam.code, 'rank']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" [for]="exam.code + '-score'">{{ exam.score.label }} <span class="required">*</span></label>
+                    <input [id]="exam.code + '-score'" type="number" step="0.01" class="form-control" formControlName="score"
+                      [min]="exam.score.min" [max]="exam.score.max" [placeholder]="exam.score.min + ' to ' + exam.score.max"
+                      [class.is-invalid]="err(['exams', exam.code, 'score'])" [class.is-valid]="isValid(['exams', exam.code, 'score'])">
+                    <span *ngIf="exam.score.min < 0" class="field-hint">Raw score, negative allowed, up to 2 decimals</span>
+                    <div *ngIf="err(['exams', exam.code, 'score']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+                  </div>
+                </div>
+
+                <ng-container *ngTemplateOutlet="uploader; context: { field: scorecardField(exam.code), title: exam.label + ' Scorecard', hint: 'Result or rank card' }"></ng-container>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="formError('noExam')" class="bva-feedback invalid mt-2">
             <i class="fa-solid fa-circle-exclamation"></i>
-            <span class="bva-text">{{ fileFeedback.message }}</span>
+            <span class="bva-text">Fill in at least one accepted entrance exam.</span>
+          </div>
+        </div>
+
+        <!-- SECTION: Declaration -->
+        <div class="form-section last">
+          <div class="section-title-wrap">
+            <span class="section-num"></span>
+            <h3>Declaration</h3>
           </div>
 
-          <span *ngIf="fileError" class="error-feedback mt-2">
-            <i class="fa-solid fa-circle-exclamation"></i> {{ fileError }}
-          </span>
+          <label class="declaration-box" [class.is-invalid]="err('declaration')">
+            <input type="checkbox" formControlName="declaration">
+            <span>
+              I declare that all the information and documents in this application are true and complete.
+              I understand that if any of it is found false, my application or admission may be cancelled.
+            </span>
+          </label>
+          <div *ngIf="err('declaration')" class="bva-feedback invalid">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span class="bva-text">Please accept the declaration to submit.</span>
+          </div>
         </div>
 
         <!-- Form Submit Bar -->
         <div class="form-submit-bar">
           <div class="terms-note">
-            <i class="fa-solid fa-circle-check text-green"></i>
-            <span>By submitting, you certify that all academic and personal records provided are authentic.</span>
+            <i class="fa-solid fa-circle-info text-gold"></i>
+            <span>
+              {{ selectedExamCount }} exam{{ selectedExamCount === 1 ? '' : 's' }} selected &bull;
+              Fields marked <span class="required">*</span> are mandatory.
+            </span>
           </div>
 
-          <!-- In-view error alert if submission attempted with missing fields -->
-          <div *ngIf="errorMessage" class="alert alert-error mb-3" style="width: 100%;">
+          <div *ngIf="errorMessage()" class="alert alert-error mb-3" style="width: 100%;" role="alert">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span>{{ errorMessage }}</span>
+            <span>{{ errorMessage() }}</span>
           </div>
 
           <div class="submit-actions">
             <a routerLink="/applicant/dashboard" class="btn btn-outline">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading">
-              <span *ngIf="!loading"><i class="fa-solid fa-paper-plane"></i> Submit Application & Save to Database</span>
-              <span *ngIf="loading"><i class="fa-solid fa-spinner fa-spin"></i> Submitting & Storing in Database...</span>
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="alreadySubmittedApp()">
+              Review Application
             </button>
           </div>
         </div>
       </form>
+    </div>
+
+    <!-- Final review before submission -->
+    <div *ngIf="step === 'review'" class="form-card card review">
+      <h3 class="review-title">Review your application</h3>
+      <p class="section-intro">Check every detail and document. Use <strong>Edit</strong> to change anything. You cannot edit after submitting.</p>
+
+      <h4 class="subsection-title">Program &amp; Stream</h4>
+      <table class="review-table">
+        <tr><th>Applying For</th><td>{{ v.program }}</td></tr>
+        <tr *ngFor="let c of chosenStreams; trackBy: trackByStream"><th>{{ c.ordinal }} Preference</th><td>{{ c.stream.name }}</td></tr>
+      </table>
+
+      <h4 class="subsection-title">Personal &amp; Contact</h4>
+      <table class="review-table">
+        <tr><th>Full Name</th><td>{{ v.fullName }}</td></tr>
+        <tr><th>Date of Birth</th><td>{{ v.dob | date:'dd MMM yyyy' }}</td></tr>
+        <tr><th>Gender / Category</th><td>{{ v.gender }} / {{ v.category }}</td></tr>
+        <tr><th>Nationality</th><td>{{ v.nationality }}</td></tr>
+        <tr><th>Email</th><td>{{ v.email }}</td></tr>
+        <tr><th>Mobile</th><td>{{ v.phone }}<span *ngIf="v.alternatePhone">, {{ v.alternatePhone }}</span></td></tr>
+        <tr><th>Address</th><td>{{ v.address }}, {{ v.city }}, {{ v.state }} - {{ v.pincode }}</td></tr>
+      </table>
+
+      <h4 class="subsection-title">Parent / Guardian</h4>
+      <table class="review-table">
+        <tr><th>Father</th><td>{{ v.parents.fatherName }}<span *ngIf="v.parents.fatherPhone">, {{ v.parents.fatherPhone }}</span><span *ngIf="v.parents.fatherOccupation">, {{ v.parents.fatherOccupation }}</span></td></tr>
+        <tr><th>Mother</th><td>{{ v.parents.motherName }}<span *ngIf="v.parents.motherPhone">, {{ v.parents.motherPhone }}</span><span *ngIf="v.parents.motherOccupation">, {{ v.parents.motherOccupation }}</span></td></tr>
+        <tr *ngIf="v.parents.guardianName"><th>Guardian</th><td>{{ v.parents.guardianName }}<span *ngIf="v.parents.guardianRelation"> ({{ v.parents.guardianRelation }})</span><span *ngIf="v.parents.guardianPhone">, {{ v.parents.guardianPhone }}</span></td></tr>
+      </table>
+
+      <h4 class="subsection-title">Academics</h4>
+      <table class="review-table">
+        <tr><th>Class X</th><td>{{ v.classX.board }}, {{ v.classX.school }}, {{ v.classX.passingYear }} - {{ v.classX.percentage }}%</td></tr>
+        <tr><th>Class XII</th><td>{{ v.classXII.board }}, {{ v.classXII.school }}, {{ v.classXII.stream }}, {{ v.classXII.passingYear }} - {{ v.classXII.percentage }}%<span *ngIf="v.classXII.pcmPercentage">, PCM {{ v.classXII.pcmPercentage }}%</span></td></tr>
+        <tr *ngIf="needsGraduation"><th>Graduation</th><td>{{ v.graduation.degree }}, {{ v.graduation.university }}, {{ v.graduation.passingYear }} - {{ v.graduation.percentage }}%</td></tr>
+      </table>
+
+      <h4 class="subsection-title">Entrance Exams</h4>
+      <table class="review-table">
+        <tr *ngFor="let e of reviewExams; trackBy: trackByLabel">
+          <th>{{ e.label }} {{ e.year }}</th>
+          <td>Roll {{ e.rollNumber }}<span *ngIf="e.rank">, Rank {{ e.rank | number }}</span>, {{ e.scoreLabel }} {{ e.score }}</td>
+        </tr>
+      </table>
+
+      <h4 class="subsection-title">Documents</h4>
+      <table class="review-table">
+        <tr *ngFor="let d of reviewDocuments; trackBy: trackByField">
+          <th>{{ d.label }}</th>
+          <td>
+            {{ d.file.name }} ({{ (d.file.size / 1024) | number:'1.0-1' }} KB)
+            <button type="button" class="link-btn" (click)="previewFile(d.file)">View</button>
+          </td>
+        </tr>
+      </table>
+
+      <p class="review-declaration">
+        <i class="fa-solid fa-check text-green"></i> Declaration accepted. After submitting you will pay the application fee to get your Application ID.
+      </p>
+
+      <div class="submit-actions review-actions">
+        <button type="button" class="btn btn-outline" (click)="backToEdit()" [disabled]="loading()">Edit</button>
+        <button type="button" class="btn btn-primary btn-lg" (click)="confirmSubmit()" [disabled]="loading()">
+          <span *ngIf="!loading()">Submit &amp; Proceed to Payment</span>
+          <span *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Submitting...</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

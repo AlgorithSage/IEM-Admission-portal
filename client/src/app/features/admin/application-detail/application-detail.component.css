@@ -1,0 +1,65 @@
+.head {
+  margin-bottom: 12px;
+}
+
+.back {
+  padding: 0;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title-row h2 {
+  font-size: 1.35rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.decision-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.docs th,
+.list th {
+  width: auto;
+}
+
+.list {
+  display: block;
+  overflow-x: auto;
+}
+
+.reject-box {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.reject-box .form-control {
+  max-width: 260px;
+}
+
+@media (max-width: 640px) {
+  .reject-box {
+    flex-direction: column;
+  }
+  .reject-box .form-control {
+    max-width: none;
+  }
+}

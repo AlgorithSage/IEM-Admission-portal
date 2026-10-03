@@ -4,6 +4,7 @@
 > **Status**: APPROVED
 > **Target Theme**: Professional Academic & Institutional Portal (Matching `landing page.png`)
 > **Core Brand Color**: Warm Amber / Gold (`#F59E0B`)
+> **Version**: 2.0
 
 ---
 
@@ -37,16 +38,27 @@
 
 ## 3. Component Specs
 
+### 🏛️ Header & Navigation (`navbar.component.html`)
+- **Institutional Branding**: IEM crest logo alongside bold institutional title and verification chip.
+- **Context-Aware Navigation**: Dynamic links adapt between public promotional pages and authenticated operational portals.
+- **Unified User Profile Widget**: Compact initials avatar, full user name, colored role badge, and quick logout button.
+
 ### 🏛️ Hero Section (`landing.component.html`)
 - Split 2-column layout:
   - Left column: IEM badge, large heading *"Your Future Begins Here"*, gold text highlight on "Begins Here", dual buttons: `Apply Now` (Gold `#F59E0B`) and `Explore Programs` (Dark `#18181B`).
   - Right column: IEM campus building visual.
-- Highlights bar: 4 grid cards (*Easy Application, Secure & Reliable, Track in Real-time, Timely Updates*) styled with a light pastel yellow background (`#FEF3C7`), soft warm borders (`#FDE68A`), pure black logos (`#0A0A0A`), and bold black headings.
+- Highlights bar: 4 grid cards (*Easy Application, Secure & Reliable, Track in Real-time, Timely Updates*) styled with light pastel yellow background (`#FEF3C7`), soft warm borders (`#FDE68A`), black logos (`#0A0A0A`), and bold typography.
 - Popular Programs & 3-Step Process: Styled with matching light yellow background (`#FEF3C7`), black logos, and black typography for optimal readability.
 
+### 🔐 Authentication UI (`applicant-login` & `admin-login`)
+- **Password Visibility Toggles**: Interactive eye icon with hover feedback.
+- **Real-Time Password Strength Meter**: Segmented progress bar with color-coded feedback (Red: Weak, Amber: Medium, Emerald: Strong).
+- **Guidelines Box**: Integrated expandable guidance on accepted formats and demo credentials.
+
 ### 📋 Applicant Dashboard & Form
-- Clean card container with step-wise visual indicators.
+- Clean card container with step-wise visual indicators and BVA form field validation.
 - File upload box with dashed border, drag-and-drop indicator, format constraints (`PDF, JPG, PNG <= 5MB`), and uploaded file pill with remove button.
+- Printable Admission Receipt: High-contrast, clean printable layout for admitted and applicant students.
 
 ### 📊 Admin Dashboard
 - Top KPI stat cards: Total Applications, Under Review, Selected, Rejected.

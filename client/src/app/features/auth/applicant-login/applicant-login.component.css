@@ -40,27 +40,6 @@
   font-size: 0.9rem;
 }
 
-.demo-banner {
-  background-color: #fffbeb;
-  border: 1px dashed var(--iem-gold);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  gap: 10px;
-}
-
-.demo-text {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #92400e;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .tab-switcher {
   display: flex;
   border-radius: var(--radius-sm);
@@ -231,4 +210,3 @@
 .strength-bar.strength-strong {
   background-color: #10b981;
 }
-

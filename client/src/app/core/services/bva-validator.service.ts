@@ -505,6 +505,106 @@ export class BvaValidatorService {
   }
 
   /**
+   * Generic Numeric Range Validation (min <= value <= max)
+   * Supports negative bounds (e.g. exam marks with negative marking).
+   */
+  validateRange(
+    val: unknown,
+    label: string,
+    min: number,
+    max: number,
+    opts: { integer?: boolean; maxDecimals?: number; optional?: boolean } = {}
+  ): ValidationFeedback {
+    const raw = val === null || val === undefined ? '' : String(val).trim();
+    if (raw === '') {
+      return opts.optional
+        ? { isValid: true, message: '', rule: 'Optional', severity: 'none' }
+        : { isValid: false, message: `${label} is required.`, rule: 'Required', severity: 'error' };
+    }
+
+    const num = Number(raw);
+    if (!Number.isFinite(num)) {
+      return { isValid: false, message: `${label} must be a number.`, rule: 'Numeric Required', severity: 'error' };
+    }
+
+    if (opts.integer && !Number.isInteger(num)) {
+      return { isValid: false, message: `${label} must be a whole number.`, rule: 'Integer Only', severity: 'error' };
+    }
+
+    if (opts.maxDecimals !== undefined) {
+      const decimals = raw.includes('.') ? raw.split('.')[1].length : 0;
+      if (decimals > opts.maxDecimals) {
+        return {
+          isValid: false,
+          message: `${label} allows at most ${opts.maxDecimals} decimal places.`,
+          rule: `Max ${opts.maxDecimals} Decimals`,
+          severity: 'error'
+        };
+      }
+    }
+
+    if (num < min) {
+      return {
+        isValid: false,
+        message: `${label} cannot be below ${min.toLocaleString('en-IN')} (${num} entered).`,
+        rule: `Min ${min}`,
+        severity: 'error'
+      };
+    }
+
+    if (num > max) {
+      return {
+        isValid: false,
+        message: `${label} cannot exceed ${max.toLocaleString('en-IN')} (${num} entered).`,
+        rule: `Max ${max}`,
+        severity: 'error'
+      };
+    }
+
+    return { isValid: true, message: `Valid ${label.toLowerCase()}.`, rule: 'Valid', severity: 'success' };
+  }
+
+  /**
+   * Required Text Validation (minLen <= length <= maxLen)
+   */
+  validateText(val: string, label: string, minLen = 2, maxLen = 100, lettersOnly = false): ValidationFeedback {
+    const clean = (val || '').trim();
+    if (!clean) {
+      return { isValid: false, message: `${label} is required.`, rule: 'Required', severity: 'error' };
+    }
+    if (clean.length < minLen) {
+      return { isValid: false, message: `${label} must be at least ${minLen} characters.`, rule: 'Too Short', severity: 'error' };
+    }
+    if (clean.length > maxLen) {
+      return { isValid: false, message: `${label} cannot exceed ${maxLen} characters.`, rule: 'Too Long', severity: 'error' };
+    }
+    if (lettersOnly && /[^a-zA-Z\s.'-]/.test(clean)) {
+      return { isValid: false, message: `${label} can contain letters only.`, rule: 'Letters Only', severity: 'error' };
+    }
+    return { isValid: true, message: `Valid ${label.toLowerCase()}.`, rule: 'Valid', severity: 'success' };
+  }
+
+  /**
+   * Indian PIN Code Validation (6 digits, cannot start with 0)
+   */
+  validatePincode(val: string): ValidationFeedback {
+    const clean = (val || '').trim();
+    if (!clean) {
+      return { isValid: false, message: 'PIN code is required.', rule: 'Required', severity: 'error' };
+    }
+    if (!/^\d+$/.test(clean)) {
+      return { isValid: false, message: 'PIN code can contain digits only.', rule: 'Digits Only', severity: 'error' };
+    }
+    if (clean.length !== 6) {
+      return { isValid: false, message: `PIN code must be exactly 6 digits (${clean.length} entered).`, rule: '6 Digits', severity: 'error' };
+    }
+    if (clean.startsWith('0')) {
+      return { isValid: false, message: 'PIN code cannot start with 0.', rule: 'Invalid Prefix', severity: 'error' };
+    }
+    return { isValid: true, message: 'Valid PIN code.', rule: 'Valid', severity: 'success' };
+  }
+
+  /**
    * Document File Validation (0 < size <= 5.0 MB, Whitelist MIME)
    */
   validateFile(file: File | null): ValidationFeedback {

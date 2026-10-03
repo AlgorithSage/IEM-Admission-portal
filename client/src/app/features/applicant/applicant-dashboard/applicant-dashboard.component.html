@@ -7,168 +7,49 @@
           <i class="fa-solid fa-user-graduate"></i>
         </div>
         <div class="welcome-text">
-          <div class="welcome-tag">APPLICANT DASHBOARD</div>
-          <h2>Welcome back, {{ authService.currentUser()?.name }}!</h2>
+                    <h2>Welcome back, {{ authService.currentUser()?.name }}!</h2>
           <p>{{ authService.currentUser()?.email }} &bull; Registered Candidate</p>
         </div>
       </div>
       <div class="banner-right">
-        <div class="app-status-box" *ngIf="application">
+        <div class="app-status-box" *ngIf="!loading()">
           <span class="status-label">Current Status</span>
-          <span class="status-pill" [ngClass]="'status-' + application.status.toLowerCase()">
-            <i class="fa-solid fa-circle-dot"></i> {{ application.status }}
-          </span>
-        </div>
-        <div class="app-status-box" *ngIf="!application && !loading">
-          <span class="status-label">Current Status</span>
-          <span class="status-pill status-review">Not Submitted</span>
+          <span class="status-pill" [ngClass]="statusClass">{{ application()?.status || 'Not Started' }}</span>
         </div>
       </div>
     </div>
 
     <!-- Application Lifecycle Progress Bar -->
     <div class="progress-section card">
-      <h3 class="progress-title">Admission Lifecycle Timeline</h3>
+      <h3 class="progress-title">Admission Progress</h3>
       <div class="steps-tracker">
-        <!-- Step 1 -->
-        <div class="step-item" [ngClass]="getStepState(1)">
-          <div class="step-indicator">
-            <i class="fa-solid fa-check"></i>
+        <ng-container *ngFor="let step of steps(); let last = last">
+          <div class="step-item" [ngClass]="step.state">
+            <div class="step-indicator"><i [class]="step.icon"></i></div>
+            <div class="step-label">
+              <h4>{{ step.title }}</h4>
+              <p>{{ step.note }}</p>
+            </div>
           </div>
-          <div class="step-label">
-            <h4>Registration</h4>
-            <p>Account Created</p>
-          </div>
-        </div>
-
-        <div class="step-connector" [class.filled]="getStepState(2) === 'completed' || getStepState(2) === 'active'"></div>
-
-        <!-- Step 2 -->
-        <div class="step-item" [ngClass]="getStepState(2)">
-          <div class="step-indicator">
-            <i class="fa-solid fa-file-arrow-up"></i>
-          </div>
-          <div class="step-label">
-            <h4>Application Form</h4>
-            <p>{{ application ? 'Submitted' : 'Pending Action' }}</p>
-          </div>
-        </div>
-
-        <div class="step-connector" [class.filled]="getStepState(3) === 'completed' || getStepState(3) === 'active'"></div>
-
-        <!-- Step 3 -->
-        <div class="step-item" [ngClass]="getStepState(3)">
-          <div class="step-indicator">
-            <i class="fa-solid fa-magnifying-glass"></i>
-          </div>
-          <div class="step-label">
-            <h4>Scrutiny & Review</h4>
-            <p>{{ application?.status === 'Review' ? 'In Progress' : (application?.status === 'Selected' || application?.status === 'Rejected' ? 'Completed' : 'Queued') }}</p>
-          </div>
-        </div>
-
-        <div class="step-connector" [class.filled]="getStepState(4) === 'completed'"></div>
-
-        <!-- Step 4 -->
-        <div class="step-item" [ngClass]="getStepState(4)">
-          <div class="step-indicator">
-            <i class="fa-solid fa-award"></i>
-          </div>
-          <div class="step-label">
-            <h4>Admission Decision</h4>
-            <p>{{ application?.status === 'Selected' ? 'Selected' : (application?.status === 'Rejected' ? 'Rejected' : 'Pending Decision') }}</p>
-          </div>
-        </div>
+          <div *ngIf="!last" class="step-connector" [class.filled]="step.state === 'completed'"></div>
+        </ng-container>
       </div>
     </div>
 
-    <!-- Action Cards Grid -->
-    <div class="action-grid">
-      <!-- Card 1: Application Form Action -->
-      <div class="action-card card">
-        <div class="action-icon" [class.icon-completed]="application">
-          <i class="fa-solid fa-file-signature"></i>
-        </div>
-        <div class="action-body">
-          <h3>Admission Application Form</h3>
-          <p *ngIf="!application">Complete your personal details, academic scores, and upload required marksheets.</p>
-          <p *ngIf="application">
-            You have submitted your form for <strong>{{ application.department }}</strong> with <strong>{{ application.percentage }}%</strong>.
-          </p>
-        </div>
-        <div class="action-footer">
-          <a *ngIf="!application" routerLink="/applicant/apply" class="btn btn-primary btn-block">
-            <i class="fa-solid fa-pen-to-square"></i> Fill Application Form
-          </a>
-          <a *ngIf="application" routerLink="/applicant/status" class="btn btn-outline btn-block">
-            <i class="fa-solid fa-eye"></i> View Submitted Form
-          </a>
-        </div>
-      </div>
-
-      <!-- Card 2: Document Vault & Reference Preview -->
-      <div class="action-card card">
-        <div class="action-icon">
-          <i class="fa-solid fa-file-pdf"></i>
-        </div>
-        <div class="action-body">
-          <h3>Marksheet & Document</h3>
-          <p *ngIf="application?.document?.fileName">
-            Document: <strong>{{ application.document.originalName || application.document.fileName }}</strong><br>
-            <span class="text-secondary" *ngIf="application.document.fileSize">
-              Size: {{ (application.document.fileSize / 1024) | number:'1.0-1' }} KB &bull; {{ application.document.mimeType || 'Document' }}
-            </span>
-          </p>
-          <p *ngIf="application && !application.document?.fileName">
-            No document attached to your application yet.
-          </p>
-          <p *ngIf="!application">
-            Your marksheet/certificate file reference will appear here once uploaded via the application form.
-          </p>
-        </div>
-        <div class="action-footer">
-          <a *ngIf="application?.document?.filePath" [href]="application.document.filePath" target="_blank" class="btn btn-dark btn-block">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Preview Marksheet File
-          </a>
-          <a *ngIf="!application" routerLink="/applicant/apply" class="btn btn-outline btn-block">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Upload in Application Form
-          </a>
-          <button *ngIf="application && !application?.document?.filePath" class="btn btn-outline btn-block" disabled>
-            No File Attached
-          </button>
-        </div>
-      </div>
-
-      <!-- Card 3: Track Status Timeline -->
-      <div class="action-card card">
-        <div class="action-icon">
-          <i class="fa-solid fa-timeline"></i>
-        </div>
-        <div class="action-body">
-          <h3>Real-time Status Tracking</h3>
-          <p>
-            Monitor status transitions, official administrative remarks, and view your formal admission acknowledgment.
-          </p>
-        </div>
-        <div class="action-footer">
-          <a routerLink="/applicant/status" class="btn btn-primary btn-block">
-            <i class="fa-solid fa-chart-line"></i> Track Status & Timeline
-          </a>
-        </div>
+    <!-- Next action + summary -->
+    <div class="card box">
+      <table class="plain-table" *ngIf="application() as app">
+        <tr *ngIf="app.applicationId"><th>Application ID</th><td><strong>{{ app.applicationId }}</strong></td></tr>
+        <tr><th>Program</th><td>{{ app.program || app.department }}<span *ngIf="app.streamPreferences?.length"> - {{ app.streamPreferences![0] }}</span></td></tr>
+        <tr><th>Documents</th><td>{{ app.documents.length }} uploaded, {{ verifiedCount }} verified</td></tr>
+        <tr *ngIf="app.adminRemarks"><th>Latest Remarks</th><td>{{ app.adminRemarks }}</td></tr>
+      </table>
+      <p *ngIf="!application() && !loading()">Start your admission application. Keep your Class X, Class XII and entrance exam documents ready (PDF/JPG/PNG, max 5 MB each).</p>
+      <div class="actions">
+        <a *ngIf="application()" routerLink="/applicant/status" class="btn btn-outline">View Application</a>
+        <a [routerLink]="nextAction.link" class="btn btn-primary">{{ nextAction.label }}</a>
       </div>
     </div>
 
-    <!-- Official Advisory Box -->
-    <div class="advisory-card card">
-      <div class="advisory-icon">
-        <i class="fa-solid fa-circle-info text-gold"></i>
-      </div>
-      <div class="advisory-content">
-        <h4>Important Notice for Applicants</h4>
-        <p>
-          Document verification and merit shortlisting are conducted in phases. Please verify that your uploaded marksheet is clean and legible. If any discrepancy is noted, your status will reflect in the scrutiny remarks.
-        </p>
-      </div>
-    </div>
   </div>
 </div>

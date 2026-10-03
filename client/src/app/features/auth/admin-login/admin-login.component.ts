@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -14,8 +14,8 @@ import { BvaValidatorService, ValidationFeedback } from '../../../core/services/
 })
 export class AdminLoginComponent {
   loginForm: FormGroup;
-  errorMessage = '';
-  loading = false;
+  readonly errorMessage = signal<string>('');
+  readonly loading = signal<boolean>(false);
   showPassword = false;
 
   constructor(
@@ -53,8 +53,8 @@ export class AdminLoginComponent {
   onSubmit(): void {
     if (this.loginForm.invalid) return;
 
-    this.loading = true;
-    this.errorMessage = '';
+    this.loading.set(true);
+    this.errorMessage.set('');
 
     this.authService.login({
       email: this.loginForm.value.email,
@@ -62,12 +62,12 @@ export class AdminLoginComponent {
       role: 'admin'
     }).subscribe({
       next: (res) => {
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigate(['/admin/dashboard']);
       },
       error: (err) => {
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Access Denied. Invalid administrative credentials.';
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Access Denied. Invalid administrative credentials.');
       }
     });
   }

@@ -1,9 +1,18 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApplicationService } from '../../../core/services/application.service';
 import { Application } from '../../../models/application.model';
+
+type StepState = 'completed' | 'active' | 'pending';
+
+interface Step {
+  title: string;
+  icon: string;
+  state: StepState;
+  note: string;
+}
 
 @Component({
   selector: 'app-applicant-dashboard',
@@ -13,55 +22,64 @@ import { Application } from '../../../models/application.model';
   styleUrls: ['./applicant-dashboard.component.css']
 })
 export class ApplicantDashboardComponent implements OnInit {
-  application: Application | null = null;
-  loading = true;
+  // Signals: state set in HTTP callbacks must notify OnPush/zoneless change detection (Angular 22)
+  readonly application = signal<Application | null>(null);
+  readonly loading = signal(true);
+  readonly steps = signal<Step[]>([]);
 
   constructor(
     public authService: AuthService,
-    private applicationService: ApplicationService,
-    private router: Router
+    private applicationService: ApplicationService
   ) {}
 
   ngOnInit(): void {
-    this.loadApplication();
-  }
-
-  loadApplication(): void {
-    this.loading = true;
     this.applicationService.getMyApplication().subscribe({
       next: (res) => {
-        this.loading = false;
-        this.application = res.application;
+        this.application.set(res.application);
+        this.steps.set(this.buildSteps());
+        this.loading.set(false);
       },
       error: () => {
-        this.loading = false;
+        this.steps.set(this.buildSteps());
+        this.loading.set(false);
       }
     });
   }
 
-  getStepState(stepIndex: number): 'completed' | 'active' | 'pending' {
-    if (!this.application) {
-      return stepIndex === 1 ? 'active' : 'pending';
-    }
+  get statusClass(): string {
+    const app = this.application();
+    return app ? 'status-' + app.status.toLowerCase().replace(' ', '-') : 'status-review';
+  }
 
-    const status = this.application.status;
-    if (stepIndex === 1) return 'completed'; // Registered
+  get verifiedCount(): number {
+    return (this.application()?.documents || []).filter((d) => d.verification.status === 'Verified').length;
+  }
 
-    if (stepIndex === 2) { // Form Submitted
-      return 'completed';
-    }
+  /** The one thing the applicant should do next */
+  get nextAction(): { label: string; link: string } {
+    const status = this.application()?.status;
+    if (!status) return { label: 'Fill Application Form', link: '/applicant/apply' };
+    if (status === 'Payment Pending') return { label: 'Pay Application Fee', link: '/applicant/payment' };
+    if (status === 'Correction Requested') return { label: 'Correct Documents', link: '/applicant/status' };
+    return { label: 'Track Application', link: '/applicant/status' };
+  }
 
-    if (stepIndex === 3) { // Review
-      if (status === 'Review') return 'active';
-      if (status === 'Selected' || status === 'Rejected') return 'completed';
-      return 'pending';
-    }
-
-    if (stepIndex === 4) { // Final Decision
-      if (status === 'Selected' || status === 'Rejected') return 'completed';
-      return 'pending';
-    }
-
-    return 'pending';
+  private buildSteps(): Step[] {
+    const s = this.application()?.status;
+    const paid = !!s && s !== 'Payment Pending';
+    const decided = s === 'Selected' || s === 'Rejected';
+    const inScrutiny = s === 'Review' || s === 'On Hold' || s === 'Correction Requested';
+    return [
+      { title: 'Registration', icon: 'fa-solid fa-check', state: 'completed', note: 'Account created' },
+      { title: 'Form & Documents', icon: 'fa-solid fa-file-arrow-up', state: s ? 'completed' : 'active', note: s ? 'Submitted' : 'Pending' },
+      { title: 'Application Fee', icon: 'fa-solid fa-indian-rupee-sign', state: paid ? 'completed' : s ? 'active' : 'pending', note: paid ? 'Paid' : 'Pending' },
+      {
+        title: 'Scrutiny',
+        icon: 'fa-solid fa-magnifying-glass',
+        state: decided ? 'completed' : inScrutiny || s === 'Submitted' ? 'active' : 'pending',
+        note: s === 'Correction Requested' ? 'Correction needed' : s === 'On Hold' ? 'On hold' : decided ? 'Done' : s === 'Review' ? 'In progress' : 'Queued'
+      },
+      { title: 'Decision', icon: 'fa-solid fa-award', state: decided ? 'completed' : 'pending', note: decided ? s! : 'Pending' }
+    ];
   }
 }

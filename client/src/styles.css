@@ -181,6 +181,7 @@ button, input, select, textarea {
 
 /* Status Badges */
 .status-pill {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -212,6 +213,20 @@ button, input, select, textarea {
 
 .status-rejected {
   background-color: var(--status-rejected-bg);
+  color: var(--status-rejected-text);
+  border: 1px solid var(--status-rejected-border);
+}
+
+
+.status-payment-pending,
+.status-on-hold {
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.status-correction-requested {
+  background-color: var(--status-review-bg);
   color: var(--status-rejected-text);
   border: 1px solid var(--status-rejected-border);
 }
@@ -406,3 +421,114 @@ button, input, select, textarea {
   color: var(--iem-gold);
 }
 
+
+/* ---------- Plain shared building blocks ---------- */
+.page {
+  padding: 32px 0 60px;
+  background-color: var(--bg-cream);
+  min-height: calc(100vh - 76px);
+}
+
+.narrow {
+  max-width: 900px;
+}
+
+.box {
+  padding: 24px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.box h3 {
+  font-size: 1.05rem;
+}
+
+.plain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.plain-table th,
+.plain-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.plain-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.plain-table tbody th,
+.plain-table > tr > th {
+  width: 32%;
+}
+
+.plain-table .right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0 0 0 10px;
+  color: var(--iem-gold-hover);
+  font-weight: 600;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.text-green {
+  color: #15803d;
+}
+
+.text-red {
+  color: #b91c1c;
+}
+
+.alert-warning {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+@media (max-width: 640px) {
+  .actions {
+    flex-direction: column;
+  }
+  .actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+  .plain-table th,
+  .plain-table td {
+    padding: 6px;
+  }
+}

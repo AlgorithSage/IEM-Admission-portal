@@ -1,0 +1,77 @@
+<div class="page">
+  <div class="container narrow">
+    <div class="card box">
+      <h2>Application Fee</h2>
+
+      <p *ngIf="stage() === 'loading'"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+
+      <div *ngIf="error()" class="alert alert-error" role="alert">
+        <i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span>
+      </div>
+      <div *ngIf="info() && stage() !== 'done'" class="alert alert-info"><span>{{ info() }}</span></div>
+
+      <!-- Summary -->
+      <ng-container *ngIf="stage() === 'summary' && application() as application">
+        <table class="plain-table">
+          <tr><th>Applicant</th><td>{{ application.fullName }}</td></tr>
+          <tr><th>Program</th><td>{{ application.program || application.department }}</td></tr>
+          <tr><th>1st Stream Preference</th><td>{{ application.streamPreferences?.[0] || '-' }}</td></tr>
+          <tr><th>Documents</th><td>{{ application.documents.length }} uploaded</td></tr>
+        </table>
+        <p class="note">Pay the application fee to submit your application. You will get your Application ID and admission slip by email.</p>
+        <div class="actions">
+          <a routerLink="/applicant/status" class="btn btn-outline">View Documents</a>
+          <button class="btn btn-primary" (click)="startPayment()">Pay Application Fee</button>
+        </div>
+      </ng-container>
+
+      <!-- Mock Razorpay checkout -->
+      <ng-container *ngIf="stage() === 'checkout' && order() as order">
+        <div class="checkout">
+          <div class="checkout-head">
+            <strong>Razorpay Checkout</strong>
+            <span class="test-tag">Test mode - no real money</span>
+          </div>
+          <p>Amount: <strong>Rs. {{ amountRupees | number }}</strong></p>
+          <p class="muted">Order: {{ order.orderId }}</p>
+
+          <fieldset class="methods">
+            <legend>Payment method</legend>
+            <label *ngFor="let m of methods()">
+              <input type="radio" name="method" [value]="m" [(ngModel)]="method"> {{ m }}
+            </label>
+          </fieldset>
+
+          <div class="actions">
+            <button class="btn btn-outline" (click)="cancelCheckout()">Cancel</button>
+            <button class="btn btn-outline" (click)="pay('failure')">Simulate Failure</button>
+            <button class="btn btn-primary" (click)="pay('success')">Pay Rs. {{ amountRupees | number }}</button>
+          </div>
+        </div>
+      </ng-container>
+
+      <p *ngIf="stage() === 'processing'"><i class="fa-solid fa-spinner fa-spin"></i> Processing payment. Do not close this page...</p>
+
+      <!-- Done -->
+      <ng-container *ngIf="stage() === 'done' && application() as application">
+        <div class="alert alert-success">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>{{ info() || 'Your application fee has been paid.' }}</span>
+        </div>
+        <table class="plain-table">
+          <tr><th>Application ID</th><td><strong>{{ application.applicationId }}</strong></td></tr>
+          <tr><th>Amount Paid</th><td>Rs. {{ application.payment?.amount | number }}</td></tr>
+          <tr><th>Payment ID</th><td>{{ application.payment?.paymentId }}</td></tr>
+          <tr><th>Paid On</th><td>{{ application.payment?.paidAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
+          <tr><th>Emailed To</th><td>{{ application.email }}</td></tr>
+        </table>
+        <div class="actions">
+          <button class="btn btn-outline" (click)="downloadSlip()" [disabled]="downloading()">
+            {{ downloading() ? 'Downloading...' : 'Download Admission Slip' }}
+          </button>
+          <a routerLink="/applicant/status" class="btn btn-primary">Track Application</a>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
