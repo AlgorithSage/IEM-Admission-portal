@@ -2,10 +2,10 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/postgres');
 const User = require('../models/User');
+const { JWT_SECRET } = require('../config/secrets');
 
 // Helper to sign JWT token
 const generateToken = (user) => {
-  const jwtSecret = process.env.JWT_SECRET || 'iem_admission_portal_poc_secret_jwt_key_2026';
   return jwt.sign(
     {
       id: user.id || user._id,
@@ -13,7 +13,7 @@ const generateToken = (user) => {
       name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
       role: user.role
     },
-    jwtSecret,
+    JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
@@ -23,7 +23,8 @@ const generateToken = (user) => {
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { name, firstName, lastName, email, password, phone, address, role } = req.body;
+    // Public registration always creates applicants; admin accounts are provisioned server-side only
+    const { name, firstName, lastName, email, password, phone, address } = req.body;
 
     if ((!name && !firstName) || !email || !password) {
       return res.status(400).json({
@@ -56,7 +57,7 @@ const register = async (req, res, next) => {
 
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(password, salt);
-      const userRole = role === 'admin' ? 'admin' : 'applicant';
+      const userRole = 'applicant';
 
       // Insert into PostgreSQL with row_version = 1
       const insertRes = await query(
@@ -67,7 +68,7 @@ const register = async (req, res, next) => {
       );
       newUser = insertRes.rows[0];
     } catch (pgErr) {
-      // PostgreSQL offline or unavailable - fallback seamlessly to MongoDB
+      // PostgreSQL offline or unavailable - fall back to MongoDB
       const existingMongo = await User.findOne({ email: emailNormalized });
       if (existingMongo) {
         return res.status(409).json({
@@ -80,7 +81,7 @@ const register = async (req, res, next) => {
         email: emailNormalized,
         password,
         phone: phone || '',
-        role: role === 'admin' ? 'admin' : 'applicant'
+        role: 'applicant'
       });
       const token = generateToken(mongoUser);
       return res.status(201).json({
@@ -98,7 +99,7 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Dual-write replica into MongoDB for seamless cross-collection joins
+    // Dual-write replica into MongoDB for cross-collection joins
     try {
       await User.findOneAndUpdate(
         { email: emailNormalized },
@@ -198,7 +199,7 @@ const login = async (req, res, next) => {
         });
       }
     } catch (pgErr) {
-      // PostgreSQL is offline/unreachable - seamlessly fallback to MongoDB
+      // PostgreSQL is offline/unreachable: fall back to MongoDB
     }
 
     // 2. Fallback to MongoDB User authentication

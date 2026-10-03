@@ -2,8 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const path = require('path');
-const fs = require('fs');
 
 const connectDB = require('./config/db');
 const { initPostgres } = require('./config/postgres');
@@ -14,30 +12,13 @@ const User = require('./models/User');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to Databases: MongoDB Atlas & PostgreSQL
-connectDB();
+// Warm up database connections. Failures are logged, not thrown: an unhandled rejection here would
+// crash the whole serverless function. Each API request retries the connection (see middleware below).
+connectDB().catch(() => {}); // connectDB already logged the (redacted) reason
 initPostgres();
 
-// Ensure uploads folder and dummy sample marksheet exist
-const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-const uploadsDir = isServerless
-  ? path.join(require('os').tmpdir(), 'uploads')
-  : path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
-
-try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  const sampleMarksheetPath = path.join(uploadsDir, 'sample-marksheet.pdf');
-  if (!fs.existsSync(sampleMarksheetPath)) {
-    fs.writeFileSync(
-      sampleMarksheetPath,
-      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000060 00000 n\n0000000117 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n200\n%%EOF'
-    );
-  }
-} catch (fsErr) {
-  console.warn('[Server Init] Warning creating sample uploads:', fsErr.message);
-}
+// Upload storage location (documents are streamed only through the authenticated API)
+const { uploadDir: uploadsDir } = require('./middlewares/upload.middleware');
 
 // Global Middlewares - CORS supporting Vercel deployments & local dev
 const allowedOrigins = [
@@ -80,9 +61,6 @@ app.use('/api', async (req, res, next) => {
     next(err);
   }
 });
-
-// Serve uploaded marksheets statically
-app.use('/uploads', express.static(uploadsDir));
 
 // Mount REST API
 app.use('/api', apiRoutes);
@@ -139,11 +117,7 @@ const seedDefaultAccounts = async () => {
 
 // Start Server
 app.listen(PORT, async () => {
-  console.log(`=================================================`);
-  console.log(`🚀 IEM Admission Server running on port ${PORT}`);
-  console.log(`🌐 Base URL: http://localhost:${PORT}`);
-  console.log(`📁 Uploads Directory: ${uploadsDir}`);
-  console.log(`=================================================`);
+  console.log(`IEM Admission API listening on port ${PORT} (uploads: ${uploadsDir})`);
   await seedDefaultAccounts();
 });
 

@@ -1,50 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const applicationController = require('../controllers/application.controller');
+const controller = require('../controllers/application.controller');
 const { verifyToken, requireRole } = require('../middlewares/auth.middleware');
-const upload = require('../middlewares/upload.middleware');
 
-// Applicant Endpoints
-router.post(
-  '/',
-  verifyToken,
-  upload.single('marksheet'),
-  applicationController.submitApplication
-);
+// Applicant (JSON; files are uploaded beforehand via /api/uploads and referenced by upload ID)
+router.post('/', verifyToken, requireRole('applicant'), controller.submitApplication);
+router.get('/my-application', verifyToken, controller.getMyApplication);
+router.put('/my-application/documents/:docKey', verifyToken, requireRole('applicant'), controller.replaceDocument);
+router.post('/my-application/resubmit', verifyToken, requireRole('applicant'), controller.resubmitApplication);
 
-router.get(
-  '/my-application',
-  verifyToken,
-  applicationController.getMyApplication
-);
-
-// Admin-Only Endpoints
-router.get(
-  '/admin/stats',
-  verifyToken,
-  requireRole('admin'),
-  applicationController.getAdminStats
-);
-
-router.get(
-  '/',
-  verifyToken,
-  requireRole('admin'),
-  applicationController.getAllApplications
-);
-
-router.patch(
-  '/:id/status',
-  verifyToken,
-  requireRole('admin'),
-  applicationController.updateApplicationStatus
-);
-
-// Detail Endpoint
-router.get(
-  '/:id',
-  verifyToken,
-  applicationController.getApplicationById
-);
+// Owner or admin
+router.get('/:id/documents/:docKey', verifyToken, controller.streamDocument);
+router.get('/:id/slip', verifyToken, controller.downloadSlip);
 
 module.exports = router;

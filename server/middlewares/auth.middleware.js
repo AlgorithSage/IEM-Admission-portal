@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../config/secrets');
 
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -11,10 +12,9 @@ const verifyToken = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  const jwtSecret = process.env.JWT_SECRET || 'iem_admission_portal_poc_secret_jwt_key_2026';
 
   try {
-    const decoded = jwt.verify(token, jwtSecret);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // { id, email, role, name }
     next();
   } catch (error) {

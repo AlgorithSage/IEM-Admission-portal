@@ -8,7 +8,7 @@ const os = require('os');
 const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const uploadDir = isServerless
   ? path.join(os.tmpdir(), 'uploads')
-  : path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads');
+  : path.resolve(__dirname, '..', process.env.UPLOAD_DIR || 'uploads');
 
 try {
   if (!fs.existsSync(uploadDir)) {
@@ -26,7 +26,8 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, `marksheet-${uniqueSuffix}${ext}`);
+    const prefix = file.fieldname.replace(/[^a-zA-Z0-9_]/g, '') || 'document';
+    cb(null, `${prefix}-${uniqueSuffix}${ext}`);
   }
 });
 
@@ -36,16 +37,20 @@ const fileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file format. Only PDF, JPG, and PNG files are allowed.'), false);
+    cb(Object.assign(new Error('Invalid file format. Only PDF, JPG and PNG files are allowed.'), { status: 400 }), false);
   }
 };
 
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+    files: 1 // one document per request
   },
   fileFilter: fileFilter
 });
+
+// Exposed so stored files can be resolved and streamed through the authenticated API
+upload.uploadDir = uploadDir;
 
 module.exports = upload;

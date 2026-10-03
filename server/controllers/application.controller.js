@@ -1,317 +1,196 @@
 const Application = require('../models/Application');
-const path = require('path');
+const { audit } = require('../models/AuditLog');
+const { validateApplication } = require('../validators/application.validator');
+const { COMPETITIVE_EXAMS } = require('../config/admission.rules');
+const { findSlot, documentSlots } = require('../services/documents.service');
+const storage = require('../services/storage.service');
+const { claimUploads, releaseUploads, refFromUpload } = require('../services/uploads.service');
+const { findApplicationForUser, isOwner, transitionStatus, httpError } = require('../services/workflow.service');
+const { generateAdmissionSlip } = require('../services/slip.service');
+const { serializeApplication } = require('../services/presenter');
 
-// State Machine Transition Graph
-const ALLOWED_TRANSITIONS = {
-  Submitted: ['Review'],
-  Review: ['Selected', 'Rejected', 'Submitted'],
-  Selected: [], // Terminal state
-  Rejected: []  // Terminal state
-};
-
-// @desc    Submit a new admission application with file upload
-// @route   POST /api/applications
+// @desc    Create an application from form data and previously uploaded files
+//          (body.documents maps document slots to upload IDs). Stays 'Payment Pending' until the fee is paid.
+// @route   POST /api/applications   (JSON)
 // @access  Private (Applicant)
 const submitApplication = async (req, res, next) => {
+  let claimed = null;
   try {
-    const applicantId = req.user.id;
-
-    // Check if applicant has already submitted an application
-    const existingApp = await Application.findOne({ applicant: applicantId });
+    const existingApp = await findApplicationForUser(req.user);
     if (existingApp) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: 'You have already submitted an application. Check status tracker to track your application status.'
+        message: 'You already have an application. Open the status page to continue.',
+        application: serializeApplication(existingApp)
       });
     }
 
-    const {
-      fullName,
-      email,
-      phone,
-      dob,
-      gender,
-      address,
-      department,
-      qualifyingExam,
-      passingYear,
-      percentage
-    } = req.body;
+    const { errors, data } = validateApplication(req.body);
 
-    if (!fullName || !department || !qualifyingExam || !passingYear || !percentage) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please complete all required fields.'
-      });
-    }
-
-    // Process uploaded document metadata from Multer
-    let documentData = {};
-    if (req.file) {
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
-      documentData = {
-        fileName: req.file.filename,
-        originalName: req.file.originalname,
-        filePath: `${baseUrl}/uploads/${req.file.filename}`,
-        mimeType: req.file.mimetype,
-        fileSize: req.file.size,
-        uploadedAt: new Date()
-      };
-    } else {
-      documentData = {
-        fileName: 'sample-marksheet.pdf',
-        originalName: '12th_Standard_Marksheet.pdf',
-        filePath: `${req.protocol}://${req.get('host')}/uploads/sample-marksheet.pdf`,
-        mimeType: 'application/pdf',
-        fileSize: 1048576,
-        uploadedAt: new Date()
-      };
-    }
-
-    const newApplication = new Application({
-      applicant: applicantId,
-      fullName,
-      email: email || req.user.email,
-      phone: phone || req.user.phone || '',
-      dob: dob || '',
-      gender: gender || 'Male',
-      address: address || '',
-      department,
-      qualifyingExam,
-      passingYear: Number(passingYear),
-      percentage: Number(percentage),
-      document: documentData,
-      status: 'Submitted',
-      adminRemarks: 'Application submitted successfully. Awaiting scrutiny.',
-      statusHistory: [
-        {
-          fromStatus: 'Submitted',
-          toStatus: 'Submitted',
-          changedAt: new Date(),
-          changedBy: applicantId,
-          remarks: 'Submitted by applicant via portal'
-        }
-      ]
+    // Every required document slot must reference an upload
+    const docIds = req.body.documents && typeof req.body.documents === 'object' ? req.body.documents : {};
+    const required = { classXMarksheet: 'Class X marksheet', classXIIMarksheet: 'Class XII marksheet' };
+    if (data.graduation) required.graduationMarksheet = 'Graduation marksheet';
+    data.competitiveExams.forEach((e) => {
+      required[`scorecard_${e.exam}`] = `${COMPETITIVE_EXAMS[e.exam].label} scorecard`;
+    });
+    Object.entries(required).forEach(([slot, label]) => {
+      if (!docIds[slot]) errors.push(`${label} upload is required.`);
     });
 
-    const savedApp = await newApplication.save();
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: `Please correct the following: ${errors.join(' ')}`, errors });
+    }
 
-    res.status(201).json({
-      success: true,
-      message: 'Application submitted successfully!',
-      application: savedApp
-    });
+    const wanted = Object.fromEntries(Object.keys(required).map((slot) => [slot, docIds[slot]]));
+    claimed = await claimUploads(req.user.id, wanted);
+    const ref = (slot) => refFromUpload(claimed[slot]);
+
+    const app = await new Application({
+      applicant: req.user.id,
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      alternatePhone: data.alternatePhone,
+      dob: data.dob,
+      gender: data.gender,
+      category: data.category,
+      nationality: data.nationality,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      pincode: data.pincode,
+      parents: data.parents,
+      classX: { ...data.classX, marksheet: ref('classXMarksheet') },
+      classXII: { ...data.classXII, marksheet: ref('classXIIMarksheet') },
+      graduation: data.graduation ? { ...data.graduation, marksheet: ref('graduationMarksheet') } : undefined,
+      competitiveExams: data.competitiveExams.map((e) => ({ ...e, scorecard: ref(`scorecard_${e.exam}`) })),
+      declarationAccepted: data.declaration,
+      program: data.program,
+      streamPreferences: data.streamPreferences,
+      department: data.department,
+      // v1 summary fields derived from Class XII
+      qualifyingExam: `Class XII (${data.classXII.board})`,
+      passingYear: data.classXII.passingYear,
+      percentage: data.classXII.percentage,
+      document: ref('classXIIMarksheet'),
+      status: 'Payment Pending',
+      adminRemarks: 'Documents received. Pay the application fee to complete submission.',
+      statusHistory: [{ fromStatus: 'Payment Pending', toStatus: 'Payment Pending', changedAt: new Date(), changedBy: req.user.id, remarks: 'Form and documents submitted' }]
+    }).save();
+
+    claimed = null;
+    await audit({ application: app._id, actorId: req.user.id, actorRole: 'applicant', action: 'APPLICATION_CREATED', details: `${data.program}: ${data.streamPreferences.join(' > ')}` });
+
+    res.status(201).json({ success: true, message: 'Form and documents saved. Proceed to payment.', application: serializeApplication(app) });
   } catch (error) {
+    // The files stay with the applicant so a corrected resubmission can reuse them
+    if (claimed) await releaseUploads(claimed);
     next(error);
   }
 };
 
-// @desc    Get currently logged in applicant's application dossier
+// @desc    Logged-in applicant's application
 // @route   GET /api/applications/my-application
 // @access  Private (Applicant)
 const getMyApplication = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const userEmail = req.user.email ? req.user.email.toLowerCase().trim() : '';
-
-    const application = await Application.findOne({
-      $or: [
-        { applicant: userId },
-        { applicant: String(userId) },
-        { 'applicant._id': String(userId) },
-        { email: userEmail }
-      ]
-    });
-
-    if (!application) {
-      return res.status(200).json({
-        success: true,
-        application: null,
-        message: 'No active application found for this account.'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      application
-    });
+    const app = await findApplicationForUser(req.user);
+    res.status(200).json({ success: true, application: app ? serializeApplication(app) : null });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get all applications (with optional search, status & department filters)
-// @route   GET /api/applications
-// @access  Private (Admin)
-const getAllApplications = async (req, res, next) => {
+// Loads an application the caller may access (owner or admin)
+const loadAccessible = async (req) => {
+  const app = await Application.findById(req.params.id).catch(() => null);
+  if (!app) throw httpError(404, 'Application not found.');
+  if (req.user.role !== 'admin' && !isOwner(app, req.user)) throw httpError(403, 'You do not have access to this application.');
+  return app;
+};
+
+// @desc    Stream one uploaded document (never exposed as a public URL)
+// @route   GET /api/applications/:id/documents/:docKey
+// @access  Private (Owner or Admin)
+const streamDocument = async (req, res, next) => {
   try {
-    const { status, department, search } = req.query;
-    const filter = {};
-
-    if (status && status !== 'all') {
-      filter.status = status;
+    const app = await loadAccessible(req);
+    const slot = findSlot(app, req.params.docKey);
+    if (!slot) throw httpError(404, 'Document not found on this application.');
+    const ref = slot.get();
+    res.setHeader('Content-Type', ref.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(ref.originalName || ref.fileName)}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    const found = await storage.streamTo(ref, res);
+    if (!found) {
+      res.removeHeader('Content-Disposition');
+      throw httpError(410, 'The stored file is no longer available. Ask the applicant to upload it again.');
     }
-
-    if (department && department !== 'all') {
-      filter.department = department;
-    }
-
-    if (search) {
-      filter.$or = [
-        { fullName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { department: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const applications = await Application.find(filter)
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: applications.length,
-      applications
-    });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get single application by ID
-// @route   GET /api/applications/:id
-// @access  Private
-const getApplicationById = async (req, res, next) => {
+// @desc    Download the admission slip PDF (available once the fee is paid)
+// @route   GET /api/applications/:id/slip
+// @access  Private (Owner or Admin)
+const downloadSlip = async (req, res, next) => {
   try {
-    const application = await Application.findById(req.params.id);
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found.'
-      });
-    }
-
-    // Ensure applicants can only view their own dossier
-    if (req.user.role !== 'admin' && String(application.applicant) !== String(req.user.id)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized access to this application.'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      application
-    });
+    const app = await loadAccessible(req);
+    if (!app.applicationId) throw httpError(400, 'The admission slip is available after the application fee is paid.');
+    const pdf = await generateAdmissionSlip(app);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Admission-Slip-${app.applicationId}.pdf"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(pdf);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Update application status enforcing deterministic state machine
-// @route   PATCH /api/applications/:id/status
-// @access  Private (Admin only)
-const updateApplicationStatus = async (req, res, next) => {
+// @desc    Replace a rejected document while a correction is requested
+// @route   PUT /api/applications/my-application/documents/:docKey   { uploadId }
+// @access  Private (Applicant)
+const replaceDocument = async (req, res, next) => {
+  let claimed = null;
   try {
-    const { status: targetStatus, remarks } = req.body;
-    const { id } = req.params;
+    const { uploadId } = req.body || {};
+    if (!uploadId) throw httpError(400, 'Upload the replacement file first.');
+    const app = await findApplicationForUser(req.user);
+    if (!app) throw httpError(404, 'No application found.');
+    if (app.status !== 'Correction Requested') throw httpError(400, 'Documents can only be replaced when a correction is requested.');
+    const slot = findSlot(app, req.params.docKey);
+    if (!slot) throw httpError(404, 'Document not found on this application.');
+    if (slot.get().verification?.status !== 'Rejected') throw httpError(400, 'Only rejected documents can be replaced.');
 
-    const application = await Application.findById(id);
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found.'
-      });
-    }
+    claimed = await claimUploads(req.user.id, { file: uploadId });
+    const current = slot.get();
+    const oldRef = { storage: current.storage, fileName: current.fileName, filePath: current.filePath };
+    slot.set(refFromUpload(claimed.file));
+    await app.save();
+    claimed = null;
+    await storage.remove(oldRef);
 
-    const currentStatus = application.status;
-
-    // Validate State Machine Transition
-    const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
-    if (!allowed.includes(targetStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: `Illegal state transition: Cannot change status from '${currentStatus}' directly to '${targetStatus}'. Allowed next states: [${allowed.join(', ') || 'None (Terminal)'}].`
-      });
-    }
-
-    // Append to status history
-    application.statusHistory.push({
-      fromStatus: currentStatus,
-      toStatus: targetStatus,
-      changedAt: new Date(),
-      changedBy: req.user.id,
-      remarks: remarks || `Status updated to ${targetStatus} by scrutiny committee.`
-    });
-
-    application.status = targetStatus;
-    if (remarks) {
-      application.adminRemarks = remarks;
-    }
-
-    const updatedApp = await application.save();
-
-    res.status(200).json({
-      success: true,
-      message: `Status successfully updated to '${targetStatus}'.`,
-      application: updatedApp
-    });
+    await audit({ application: app._id, actorId: req.user.id, actorRole: 'applicant', action: 'DOCUMENT_REPLACED', details: slot.label });
+    res.status(200).json({ success: true, message: `${slot.label} replaced.`, application: serializeApplication(app) });
   } catch (error) {
+    if (claimed) await releaseUploads(claimed);
     next(error);
   }
 };
 
-// @desc    Execute MongoDB Aggregation Pipeline for real-time KPI metrics
-// @route   GET /api/applications/admin/stats
-// @access  Private (Admin only)
-const getAdminStats = async (req, res, next) => {
+// @desc    Resubmit after correcting all rejected documents
+// @route   POST /api/applications/my-application/resubmit
+// @access  Private (Applicant)
+const resubmitApplication = async (req, res, next) => {
   try {
-    const stats = await Application.aggregate([
-      {
-        $facet: {
-          totalCount: [{ $count: 'count' }],
-          byStatus: [
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-          ],
-          byDepartment: [
-            { $group: { _id: '$department', count: { $sum: 1 } } }
-          ],
-          recent: [
-            { $sort: { createdAt: -1 } },
-            { $limit: 5 },
-            { $project: { fullName: 1, department: 1, status: 1, createdAt: 1, percentage: 1 } }
-          ]
-        }
-      }
-    ]);
-
-    // Format aggregation results
-    const facetResult = stats[0] || {};
-    const total = facetResult.totalCount?.[0]?.count || 0;
-
-    const statusMap = { Submitted: 0, Review: 0, Selected: 0, Rejected: 0 };
-    facetResult.byStatus?.forEach((s) => {
-      if (statusMap.hasOwnProperty(s._id)) {
-        statusMap[s._id] = s.count;
-      }
-    });
-
-    const departmentMap = { 'B.Tech': 0, 'M.Tech': 0, MBA: 0, MCA: 0, BBA: 0 };
-    facetResult.byDepartment?.forEach((d) => {
-      if (departmentMap.hasOwnProperty(d._id)) {
-        departmentMap[d._id] = d.count;
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      stats: {
-        total,
-        statusBreakdown: statusMap,
-        departmentBreakdown: departmentMap,
-        recentSubmissions: facetResult.recent || []
-      }
-    });
+    const app = await findApplicationForUser(req.user);
+    if (!app) throw httpError(404, 'No application found.');
+    const pending = documentSlots(app).filter((d) => d.get().verification?.status === 'Rejected');
+    if (pending.length) throw httpError(400, `Replace these documents first: ${pending.map((d) => d.label).join(', ')}.`);
+    await transitionStatus(app, 'Review', { id: req.user.id, role: 'system' }, 'Corrected documents resubmitted by applicant');
+    res.status(200).json({ success: true, message: 'Application resubmitted for review.', application: serializeApplication(app) });
   } catch (error) {
     next(error);
   }
@@ -320,8 +199,8 @@ const getAdminStats = async (req, res, next) => {
 module.exports = {
   submitApplication,
   getMyApplication,
-  getAllApplications,
-  getApplicationById,
-  updateApplicationStatus,
-  getAdminStats
+  streamDocument,
+  downloadSlip,
+  replaceDocument,
+  resubmitApplication
 };

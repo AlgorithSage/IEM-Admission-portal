@@ -1,24 +1,37 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const poolConfig = process.env.DATABASE_URL
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000
-    }
-  : {
-      host: process.env.PG_HOST || 'localhost',
-      port: parseInt(process.env.PG_PORT || '5432', 10),
-      user: process.env.PG_USER || 'postgres',
-      password: process.env.PG_PASSWORD || 'ssql',
-      database: process.env.PG_DATABASE || 'postgres',
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// TLS is configured explicitly (sslmode is stripped from the URL so pg does not reinterpret it) and the
+// server certificate is verified. Set PG_SSL_REJECT_UNAUTHORIZED=false only for a self-signed dev server.
+const buildPoolConfig = () => {
+  const common = {
+    // Each serverless instance holds its own pool: keep it small so instances do not exhaust the database
+    max: Number(process.env.PG_POOL_MAX || (isServerless ? 3 : 10)),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000
+  };
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL);
+    url.searchParams.delete('sslmode');
+    return {
+      ...common,
+      connectionString: url.toString(),
+      ssl: { rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== 'false' }
     };
+  }
+  return {
+    ...common,
+    host: process.env.PG_HOST || 'localhost',
+    port: parseInt(process.env.PG_PORT || '5432', 10),
+    user: process.env.PG_USER || 'postgres',
+    password: process.env.PG_PASSWORD || '',
+    database: process.env.PG_DATABASE || 'postgres'
+  };
+};
+
+const poolConfig = buildPoolConfig();
 
 let isPostgresConnected = false;
 
@@ -29,7 +42,8 @@ const initPostgres = async () => {
   try {
     client = await pool.connect();
     isPostgresConnected = true;
-    console.log('[PostgreSQL] Connected successfully to host:', process.env.PG_HOST || 'localhost');
+    const host = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).hostname : process.env.PG_HOST || 'localhost';
+    console.log('[PostgreSQL] Connected to', host);
 
     // Enable pgcrypto for UUID generation
     await client.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
@@ -92,22 +106,44 @@ const initPostgres = async () => {
     }
 
     console.log('[PostgreSQL] Database tables & audit versioning schema initialized successfully.');
+    return true;
   } catch (error) {
     isPostgresConnected = false;
     console.error('[PostgreSQL] Initialization error:', error.message);
+    return false;
   } finally {
     if (client) client.release();
   }
+};
+
+// Shared, lazily awaited initialisation. Requests that arrive during start-up (or a serverless
+// cold start) wait for it instead of failing; after a failure, a new attempt is made once the
+// cooldown has passed instead of staying disconnected until the process restarts.
+const RETRY_COOLDOWN_MS = 10000;
+let initPromise = null;
+let lastFailureAt = 0;
+
+const ensurePostgres = () => {
+  if (initPromise) return initPromise;
+  if (Date.now() - lastFailureAt < RETRY_COOLDOWN_MS) return Promise.resolve(false);
+  initPromise = initPostgres().then((ok) => {
+    if (!ok) {
+      lastFailureAt = Date.now();
+      initPromise = null;
+    }
+    return ok;
+  });
+  return initPromise;
 };
 
 module.exports = {
   pool,
   isPostgresReady: () => isPostgresConnected,
   query: async (text, params) => {
-    if (!isPostgresConnected) {
-      throw new Error('PostgreSQL database is currently disconnected.');
+    if (!(await ensurePostgres())) {
+      throw new Error('PostgreSQL database is currently unavailable.');
     }
     return pool.query(text, params);
   },
-  initPostgres
+  initPostgres: ensurePostgres
 };

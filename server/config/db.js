@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const DEFAULT_MONGO_URI = 'mongodb+srv://carchisman1_db_user:hUYQnRGUeXezcsoz@iem-admission-portal.tqnwjmg.mongodb.net/iem_admission_portal?retryWrites=true&w=majority&appName=IEM-ADMISSION-PORTAL';
+const { MONGO_URI } = require('./secrets');
 
 let isConnected = false;
 
@@ -9,7 +9,7 @@ const connectDB = async () => {
     return mongoose.connection;
   }
 
-  const mongoUri = process.env.MONGO_URI || DEFAULT_MONGO_URI;
+  const mongoUri = MONGO_URI();
 
   try {
     const conn = await mongoose.connect(mongoUri, {
@@ -21,7 +21,7 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     isConnected = false;
-    console.error(`[MongoDB] Connection error: ${error.message}`);
+    console.error(`[MongoDB] Connection error: ${String(error.message).replace(/(\w+:\/\/[^:/\s]+:)[^\s]+@/g, '$1****@')}`);
     throw error;
   }
 };

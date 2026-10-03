@@ -1,0 +1,540 @@
+{
+  "admissionYear": 2026,
+  "applicationFee": 1000,
+  "pcmStreams": [
+    "Science (PCM)",
+    "Science (PCMB)"
+  ],
+  "departments": [
+    "B.Tech",
+    "M.Tech",
+    "MBA",
+    "MCA",
+    "BBA",
+    "BCA",
+    "BHM",
+    "BBA LLB"
+  ],
+  "exams": {
+    "IEMJEE": {
+      "label": "IEMJEE",
+      "conductedBy": "IEM-UEM Group",
+      "rank": {
+        "min": 1,
+        "max": 200000
+      },
+      "score": {
+        "label": "Marks",
+        "min": -90,
+        "max": 360
+      }
+    },
+    "JEE_MAIN": {
+      "label": "JEE Main",
+      "conductedBy": "NTA (B.Tech / Paper 1)",
+      "rank": {
+        "min": 1,
+        "max": 5000000
+      },
+      "score": {
+        "label": "Marks",
+        "min": -75,
+        "max": 300
+      }
+    },
+    "WBJEE": {
+      "label": "WBJEE",
+      "conductedBy": "WBJEEB (Papers 1 & 2)",
+      "rank": {
+        "min": 1,
+        "max": 500000
+      },
+      "score": {
+        "label": "Marks",
+        "min": -50,
+        "max": 200
+      }
+    },
+    "IEMCET": {
+      "label": "IEMCET",
+      "conductedBy": "IEM-UEM Group",
+      "rank": {
+        "min": 1,
+        "max": 200000
+      },
+      "score": {
+        "label": "Marks",
+        "min": -90,
+        "max": 360
+      }
+    },
+    "CAT": {
+      "label": "CAT",
+      "conductedBy": "IIMs",
+      "rank": null,
+      "score": {
+        "label": "Percentile",
+        "min": 0,
+        "max": 100
+      }
+    },
+    "MAT": {
+      "label": "MAT",
+      "conductedBy": "AIMA",
+      "rank": null,
+      "score": {
+        "label": "Composite Score",
+        "min": 0,
+        "max": 800
+      }
+    }
+  },
+  "programs": [
+    {
+      "name": "B.Tech",
+      "maxPreferences": 3,
+      "requiresPcmStream": true,
+      "streams": [
+        {
+          "name": "Computer Science & Engineering",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 80,
+            "classXII": 80
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "CSE (Artificial Intelligence)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 70,
+            "classXII": 70,
+            "pcm": 50
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "CSE (Artificial Intelligence & Machine Learning)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 75,
+            "classXII": 75,
+            "pcm": 50
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000,
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+          }
+        },
+        {
+          "name": "Information Technology",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 70,
+            "classXII": 70,
+            "pcm": 50
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000,
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+          }
+        },
+        {
+          "name": "CSE (Data Science)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "Artificial Intelligence & Data Science",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "CSE (Internet of Things)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "CSE (IoT, Cyber Security incl. Blockchain Technology)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "CSE (Cyber Security)",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "Biotechnology",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000
+          }
+        },
+        {
+          "name": "Electronics & Communication Engineering",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000,
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+          }
+        },
+        {
+          "name": "Electrical Engineering",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000,
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+          }
+        },
+        {
+          "name": "Mechanical Engineering",
+          "department": "B.Tech",
+          "durationYears": 4,
+          "entrance": "IEMJEE Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "pcm": 45
+          },
+          "fees": {
+            "firstSemester": 140000,
+            "laterSemester": 115000,
+            "total": 945000,
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+          }
+        }
+      ],
+      "exams": [
+        "IEMJEE",
+        "JEE_MAIN",
+        "WBJEE"
+      ]
+    },
+    {
+      "name": "M.Tech",
+      "maxPreferences": 2,
+      "streams": [
+        {
+          "name": "Computer Science & Engineering",
+          "department": "M.Tech",
+          "durationYears": 2,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "graduation": 60
+          },
+          "fees": {
+            "firstSemester": 77000,
+            "laterSemester": 75000,
+            "total": 302000,
+            "booking": "Rs. 77,000"
+          }
+        },
+        {
+          "name": "CSE (Artificial Intelligence & Machine Learning)",
+          "department": "M.Tech",
+          "durationYears": 2,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "graduation": 60
+          },
+          "fees": {
+            "firstSemester": 77000,
+            "laterSemester": 75000,
+            "total": 302000,
+            "booking": "Rs. 77,000"
+          }
+        },
+        {
+          "name": "Electronics & Communication Engineering",
+          "department": "M.Tech",
+          "durationYears": 2,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "graduation": 60
+          },
+          "fees": {
+            "firstSemester": 77000,
+            "laterSemester": 75000,
+            "total": 302000,
+            "booking": "Rs. 77,000"
+          }
+        }
+      ],
+      "exams": [
+        "IEMCET"
+      ]
+    },
+    {
+      "name": "MBA",
+      "maxPreferences": 1,
+      "streams": [
+        {
+          "name": "MBA (Full Time)",
+          "department": "MBA",
+          "durationYears": 2,
+          "entrance": "CAT / MAT, then Aptitude Test & GD/PI",
+          "eligibility": {
+            "classX": 55,
+            "classXII": 55,
+            "graduation": 55
+          },
+          "fees": {
+            "firstSemester": 175000,
+            "laterSemester": 175000,
+            "total": 700000,
+            "booking": "Rs. 1,62,000"
+          }
+        }
+      ],
+      "exams": [
+        "CAT",
+        "MAT"
+      ]
+    },
+    {
+      "name": "MBA (General Management)",
+      "maxPreferences": 1,
+      "streams": [
+        {
+          "name": "General Management",
+          "department": "MBA",
+          "durationYears": 2,
+          "entrance": "CAT / MAT, then Aptitude Test & GD/PI",
+          "eligibility": {
+            "classX": 55,
+            "classXII": 55,
+            "graduation": 55
+          },
+          "fees": {
+            "firstSemester": 175000,
+            "laterSemester": 175000,
+            "total": 700000,
+            "booking": "Rs. 1,62,000"
+          }
+        }
+      ],
+      "exams": [
+        "CAT",
+        "MAT"
+      ]
+    },
+    {
+      "name": "Management",
+      "maxPreferences": 2,
+      "streams": [
+        {
+          "name": "BBA",
+          "department": "BBA",
+          "durationYears": 4,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "maxGapYears": 2
+          },
+          "fees": {
+            "firstSemester": 70000,
+            "laterSemester": 60000,
+            "total": 490000,
+            "booking": "Rs. 50,000"
+          }
+        },
+        {
+          "name": "BBA LLB (Law)",
+          "department": "BBA LLB",
+          "durationYears": 5,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60
+          },
+          "fees": {
+            "firstSemester": 60000,
+            "laterSemester": 50000,
+            "total": 510000
+          }
+        }
+      ],
+      "exams": [
+        "IEMCET"
+      ]
+    },
+    {
+      "name": "Hotel Management",
+      "maxPreferences": 1,
+      "streams": [
+        {
+          "name": "BHM (Hotel Management)",
+          "department": "BHM",
+          "durationYears": 4,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60
+          },
+          "fees": {
+            "firstSemester": 60000,
+            "laterSemester": 50000,
+            "total": 410000
+          }
+        }
+      ],
+      "exams": [
+        "IEMCET"
+      ]
+    },
+    {
+      "name": "Computer Application",
+      "maxPreferences": 1,
+      "streams": [
+        {
+          "name": "BCA",
+          "department": "BCA",
+          "durationYears": 4,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "maxGapYears": 2,
+            "classXIISubject": true
+          },
+          "fees": {
+            "firstSemester": 70000,
+            "laterSemester": 60000,
+            "total": 490000,
+            "booking": "Rs. 50,000"
+          }
+        },
+        {
+          "name": "MCA",
+          "department": "MCA",
+          "durationYears": 2,
+          "entrance": "IEMCET Counselling",
+          "eligibility": {
+            "classX": 60,
+            "classXII": 60,
+            "graduation": 60
+          },
+          "fees": {
+            "firstSemester": 75000,
+            "laterSemester": 75000,
+            "total": 300000
+          }
+        }
+      ],
+      "exams": [
+        "IEMCET"
+      ]
+    }
+  ]
+}
