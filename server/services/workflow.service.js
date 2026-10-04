@@ -180,6 +180,39 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
   return { application: updated, alreadyProcessed: false, emails };
 };
 
+/**
+ * Permanently deletes an application and the applicant's personal files.
+ * Payments (accounting) and the audit trail are kept; a deletion entry records who did it and why.
+ */
+const deleteApplication = async (app, actor, reason) => {
+  const Notification = require('../models/Notification');
+  const Draft = require('../models/Draft');
+  const Upload = require('../models/Upload');
+  const storage = require('./storage.service');
+
+  const owner = String(app.applicant && app.applicant._id ? app.applicant._id : app.applicant);
+  const files = documentSlots(app).map((slot) => slot.get());
+  const staged = await Upload.find({ owner, consumedAt: null });
+
+  await Application.deleteOne({ _id: app._id });
+  await Promise.all([
+    Notification.deleteMany({ application: app._id }),
+    Draft.deleteOne({ owner }),
+    Upload.deleteMany({ owner })
+  ]);
+  // Storage clean-up is best effort and never blocks the deletion
+  await Promise.all([...files.map((ref) => storage.remove(ref)), ...staged.map((u) => storage.remove(u))]);
+
+  await audit({
+    application: app._id,
+    actorId: actor.id,
+    actorRole: 'admin',
+    action: 'APPLICATION_DELETED',
+    fromStatus: app.status,
+    details: `${app.applicationId || 'No ID'} (${app.fullName}, ${app.email}) deleted. Reason: ${reason}`
+  });
+};
+
 module.exports = {
   httpError,
   findApplicationForUser,
@@ -187,5 +220,6 @@ module.exports = {
   allowedTransitionsFor,
   transitionStatus,
   completePayment,
-  sendSubmissionEmails
+  sendSubmissionEmails,
+  deleteApplication
 };

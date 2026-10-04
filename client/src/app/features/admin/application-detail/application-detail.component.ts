@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApplicationService } from '../../../core/services/application.service';
 import { Application, ApplicationDetail, ApplicationDocument, ApplicationStatus } from '../../../models/application.model';
@@ -36,7 +36,33 @@ export class ApplicationDetailComponent implements OnInit {
 
   private id = '';
 
-  constructor(private route: ActivatedRoute, private applicationService: ApplicationService) {}
+  /** Delete-record form */
+  readonly deleteOpen = signal(false);
+  deleteConfirm = '';
+  deleteReason = '';
+
+  constructor(private route: ActivatedRoute, private applicationService: ApplicationService, private router: Router) {}
+
+  /** What the admin must type to confirm a deletion */
+  get deleteKey(): string {
+    return this.app?.applicationId || this.app?.fullName || '';
+  }
+
+  deleteRecord(): void {
+    if (!this.app || this.deleteConfirm.trim() !== this.deleteKey || this.deleteReason.trim().length < 5) return;
+    this.busy.set('delete');
+    this.error.set('');
+    this.applicationService.deleteApplication(this.id, this.deleteConfirm.trim(), this.deleteReason.trim()).subscribe({
+      next: () => {
+        this.busy.set('');
+        this.router.navigate(['/admin/applications']);
+      },
+      error: (err) => {
+        this.busy.set('');
+        this.error.set(apiError(err, 'Could not delete the record.'));
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') || '';

@@ -13,6 +13,7 @@ router.get('/report.csv', controller.exportReport);
 router.get('/applications', controller.listApplications);
 router.get('/applications/:id', controller.getApplicationDetail);
 router.patch('/applications/:id/status', controller.updateStatus);
+router.delete('/applications/:id', controller.removeApplication);
 router.patch('/applications/:id/documents/:docKey', controller.verifyDocument);
 router.post('/maintenance/cleanup-uploads', uploads.cleanupStaleUploads);
 

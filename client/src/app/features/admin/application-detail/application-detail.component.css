@@ -63,3 +63,67 @@
     max-width: none;
   }
 }
+
+/* Delete record */
+.danger-zone {
+  border-color: #fecaca;
+}
+
+.danger-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.danger-head h3 {
+  color: #b91c1c;
+}
+
+.danger-head p {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.delete-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.delete-form .actions {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+.btn-danger {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  flex-shrink: 0;
+}
+
+.btn-danger:hover {
+  background-color: #fef2f2;
+}
+
+.btn-danger-solid {
+  background-color: #b91c1c;
+  border: 1px solid #b91c1c;
+  color: #ffffff;
+}
+
+.btn-danger-solid:hover:not(:disabled) {
+  background-color: #991b1b;
+}
+
+.btn-danger-solid:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .danger-head {
+    flex-direction: column;
+  }
+}

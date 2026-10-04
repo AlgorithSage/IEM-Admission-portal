@@ -353,6 +353,28 @@ const register = async (email, extra = {}) =>
     check('status emails: correction, on hold, selected', statusMails.length === 3 && detail.notifications.every((n) => n.status === 'Sent'), statusMails.join(' | '));
     const history = detail.application.statusHistory.map((h) => h.toStatus).join(' > ');
     check('status history', history === 'Payment Pending > Submitted > Review > Correction Requested > Review > On Hold > Selected', history);
+
+    // ---------------- Delete record ----------------
+    console.log('\nAdmin: delete record');
+    const delId = subB.data.application._id;
+    const delApp = (await api('GET', `/admin/applications/${delId}`, { token: tokenAdmin })).data.application;
+    const delKey = delApp.applicationId;
+    check('applicant cannot delete -> 403', (await api('DELETE', `/admin/applications/${delId}`, { token: tokenB, json: { confirm: delKey, reason: 'test' } })).status === 403);
+    check('wrong confirmation -> 400', (await api('DELETE', `/admin/applications/${delId}`, { token: tokenAdmin, json: { confirm: 'nope', reason: 'Duplicate test record' } })).status === 400);
+    check('missing reason -> 400', (await api('DELETE', `/admin/applications/${delId}`, { token: tokenAdmin, json: { confirm: delKey, reason: '' } })).status === 400);
+    const filesBefore = fs.readdirSync(UPLOAD_DIR).length;
+    const del = await api('DELETE', `/admin/applications/${delId}`, { token: tokenAdmin, json: { confirm: delKey, reason: 'Duplicate test record' } });
+    check('delete with confirmation -> 200', del.status === 200, JSON.stringify(del.data));
+    check('deleted application is gone', (await api('GET', `/admin/applications/${delId}`, { token: tokenAdmin })).status === 404);
+    check('applicant B has no application any more', (await api('GET', '/applications/my-application', { token: tokenB })).data.application === null);
+    check("deleted application's documents removed from storage", fs.readdirSync(UPLOAD_DIR).length <= filesBefore - 4);
+    const oid = new mongoose.Types.ObjectId(delId);
+    check('payment record kept for accounting', (await db.collection('payments').countDocuments({ application: oid })) === 1);
+    check('emails removed with the application', (await db.collection('notifications').countDocuments({ application: oid })) === 0);
+    const delAudit = await db.collection('auditlogs').findOne({ application: oid, action: 'APPLICATION_DELETED' });
+    check('audit log records who deleted it and why', !!delAudit && delAudit.details.includes('Duplicate test record') && delAudit.actorRole === 'admin');
+    const statsAfter = (await api('GET', '/admin/stats', { token: tokenAdmin })).data.stats;
+    check('stats reflect the deletion', statsAfter.total === 1);
   } catch (err) {
     failed++;
     console.error('\nUnexpected error:', err.message);

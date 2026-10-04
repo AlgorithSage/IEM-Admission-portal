@@ -488,7 +488,7 @@ button, input, select, textarea {
   font-weight: 600;
   font-size: inherit;
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .link-btn:disabled {
@@ -622,4 +622,8 @@ button, input, select, textarea {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.nowrap {
+  white-space: nowrap;
 }

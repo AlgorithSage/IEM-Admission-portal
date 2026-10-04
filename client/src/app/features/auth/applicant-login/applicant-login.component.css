@@ -96,7 +96,7 @@
 
 .admin-switch-link:hover {
   color: var(--iem-gold-hover);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 /* Password Guidelines (i section) */

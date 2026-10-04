@@ -5,7 +5,7 @@ const { AuditLog, audit } = require('../models/AuditLog');
 const { DEPARTMENTS } = require('../config/admission.rules');
 const { STATUSES, VERIFIABLE_STATUSES } = require('../config/status.rules');
 const { findSlot } = require('../services/documents.service');
-const { transitionStatus, httpError } = require('../services/workflow.service');
+const { transitionStatus, httpError, deleteApplication } = require('../services/workflow.service');
 const { serializeApplication } = require('../services/presenter');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -188,6 +188,26 @@ const listAudit = async (req, res, next) => {
   }
 };
 
+// @desc    Permanently delete an application (documents, emails, drafts). Payments and the audit trail are kept.
+// @route   DELETE /api/admin/applications/:id   { confirm: <application ID or applicant name>, reason }
+const removeApplication = async (req, res, next) => {
+  try {
+    const app = await Application.findById(req.params.id).catch(() => null);
+    if (!app) throw httpError(404, 'Application not found.');
+    const { confirm, reason } = req.body || {};
+    const expected = app.applicationId || app.fullName;
+    if (String(confirm || '').trim() !== expected) {
+      throw httpError(400, `Type ${expected} to confirm the deletion.`);
+    }
+    const why = String(reason || '').trim().slice(0, 300);
+    if (why.length < 5) throw httpError(400, 'Give a reason for deleting this record (at least 5 characters).');
+    await deleteApplication(app, { id: req.user.id }, why);
+    res.status(200).json({ success: true, message: `${expected} has been deleted.` });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const csvCell = (v) => {
   let s = v === undefined || v === null ? '' : String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // neutralise spreadsheet formula injection
@@ -215,4 +235,4 @@ const exportReport = async (req, res, next) => {
   }
 };
 
-module.exports = { listApplications, getApplicationDetail, verifyDocument, updateStatus, getStats, getOverview, listAudit, exportReport };
+module.exports = { listApplications, getApplicationDetail, verifyDocument, updateStatus, removeApplication, getStats, getOverview, listAudit, exportReport };
