@@ -40,9 +40,8 @@
             class="form-control" 
             formControlName="email" 
             placeholder="e.g. aarav.sharma@gmail.com"
-            [class.is-invalid]="getLoginEmailFeedback()?.isValid === false"
-            [class.is-valid]="getLoginEmailFeedback()?.isValid === true">
-          <div *ngIf="getLoginEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            [class.is-invalid]="getLoginEmailFeedback()?.isValid === false">
+          <div *ngIf="getLoginEmailFeedback()?.isValid === false && getLoginEmailFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -56,8 +55,7 @@
               class="form-control" 
               formControlName="password" 
               placeholder="Enter your password"
-              [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false"
-              [class.is-valid]="getLoginPasswordFeedback()?.isValid === true">
+              [class.is-invalid]="getLoginPasswordFeedback()?.isValid === false">
             <button 
               type="button" 
               class="btn-toggle-eye" 
@@ -67,7 +65,7 @@
               <i [class]="showLoginPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
             </button>
           </div>
-          <div *ngIf="getLoginPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+          <div *ngIf="getLoginPasswordFeedback()?.isValid === false && getLoginPasswordFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -89,9 +87,8 @@
             class="form-control" 
             formControlName="name" 
             placeholder="e.g. Aarav Sharma"
-            [class.is-invalid]="getRegisterNameFeedback()?.isValid === false"
-            [class.is-valid]="getRegisterNameFeedback()?.isValid === true">
-          <div *ngIf="getRegisterNameFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            [class.is-invalid]="getRegisterNameFeedback()?.isValid === false">
+          <div *ngIf="getRegisterNameFeedback()?.isValid === false && getRegisterNameFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -105,9 +102,8 @@
             class="form-control" 
             formControlName="email" 
             placeholder="e.g. student@gmail.com"
-            [class.is-invalid]="getRegisterEmailFeedback()?.isValid === false"
-            [class.is-valid]="getRegisterEmailFeedback()?.isValid === true">
-          <div *ngIf="getRegisterEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            [class.is-invalid]="getRegisterEmailFeedback()?.isValid === false">
+          <div *ngIf="getRegisterEmailFeedback()?.isValid === false && getRegisterEmailFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -121,9 +117,8 @@
             class="form-control" 
             formControlName="phone" 
             placeholder="e.g. 9876543210 or +91 98765 43210"
-            [class.is-invalid]="getRegisterPhoneFeedback()?.isValid === false"
-            [class.is-valid]="getRegisterPhoneFeedback()?.isValid === true">
-          <div *ngIf="getRegisterPhoneFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            [class.is-invalid]="getRegisterPhoneFeedback()?.isValid === false">
+          <div *ngIf="getRegisterPhoneFeedback()?.isValid === false && getRegisterPhoneFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -138,8 +133,7 @@
               class="form-control" 
               formControlName="password" 
               placeholder="Minimum 6 characters"
-              [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false"
-              [class.is-valid]="getRegisterPasswordFeedback()?.isValid === true">
+              [class.is-invalid]="getRegisterPasswordFeedback()?.isValid === false">
             <button 
               type="button" 
               class="btn-toggle-eye" 
@@ -175,7 +169,7 @@
             </div>
           </div>
 
-          <div *ngIf="getRegisterPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+          <div *ngIf="getRegisterPasswordFeedback()?.isValid === false && getRegisterPasswordFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -190,8 +184,7 @@
               class="form-control" 
               formControlName="confirmPassword" 
               placeholder="Repeat password"
-              [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false"
-              [class.is-valid]="getRegisterConfirmPasswordFeedback()?.isValid === true">
+              [class.is-invalid]="getRegisterConfirmPasswordFeedback()?.isValid === false">
             <button 
               type="button" 
               class="btn-toggle-eye" 
@@ -201,7 +194,7 @@
               <i [class]="showRegisterConfirmPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
             </button>
           </div>
-          <div *ngIf="getRegisterConfirmPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+          <div *ngIf="getRegisterConfirmPasswordFeedback()?.isValid === false && getRegisterConfirmPasswordFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>

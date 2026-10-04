@@ -1,0 +1,128 @@
+<div class="shell-page">
+  <div class="page-head head-row">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p>Overview of admissions for {{ year }}</p>
+    </div>
+    <form class="head-search" (ngSubmit)="goSearch()" role="search">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input class="form-control" type="search" name="q" [(ngModel)]="search" placeholder="Search name, email or application ID" aria-label="Search applications">
+    </form>
+  </div>
+
+  <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
+
+  <!-- Headline numbers -->
+  <div class="tiles">
+    <a *ngFor="let t of tiles()" class="card tile" [routerLink]="t.link" [queryParams]="t.query || null">
+      <span class="tile-label">{{ t.label }}</span>
+      <span class="tile-value">{{ t.value }}</span>
+      <span class="tile-note">{{ t.note }}</span>
+    </a>
+    <ng-container *ngIf="!stats()">
+      <div *ngFor="let i of [1, 2, 3, 4, 5]" class="card tile tile-loading" aria-hidden="true"></div>
+    </ng-container>
+  </div>
+
+  <div class="grid-2">
+    <!-- Applications over time -->
+    <section class="card panel">
+      <div class="panel-head">
+        <div>
+          <h2>Applications Over Time</h2>
+          <p class="muted">{{ yearTotal() }} started in {{ year }}</p>
+        </div>
+        <select *ngIf="(overview()?.years?.length || 0) > 1" class="form-control year-select" [(ngModel)]="year" (change)="loadOverview()" aria-label="Year">
+          <option *ngFor="let y of overview()?.years" [ngValue]="y">{{ y }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="overview() as o" class="chart" (mouseleave)="hovered.set(null)">
+        <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" [attr.aria-label]="'Applications started per month in ' + year">
+          <!-- Grid and y-axis labels -->
+          <g *ngFor="let t of yTicks()">
+            <line class="grid" [attr.x1]="PAD.left" [attr.x2]="W - PAD.right" [attr.y1]="y(t)" [attr.y2]="y(t)"></line>
+            <text class="axis" [attr.x]="PAD.left - 8" [attr.y]="y(t) + 4" text-anchor="end">{{ t }}</text>
+          </g>
+          <text *ngFor="let m of months; let i = index" class="axis" [attr.x]="x(i)" [attr.y]="H - 8" text-anchor="middle">{{ m }}</text>
+
+          <path class="area" [attr.d]="areaPath()"></path>
+          <path class="line" [attr.d]="linePath()"></path>
+
+          <!-- Hover crosshair and point -->
+          <ng-container *ngIf="hovered() as hi; else none">
+            <line class="crosshair" [attr.x1]="x(hi - 1)" [attr.x2]="x(hi - 1)" [attr.y1]="PAD.top" [attr.y2]="H - PAD.bottom"></line>
+            <circle class="point" [attr.cx]="x(hi - 1)" [attr.cy]="y(o.monthly[hi - 1])" r="4"></circle>
+          </ng-container>
+          <ng-template #none></ng-template>
+
+          <!-- Hit targets wider than the marks -->
+          <rect *ngFor="let m of months; let i = index" class="hit"
+            [attr.x]="x(i) - (W - PAD.left - PAD.right) / 22" [attr.width]="(W - PAD.left - PAD.right) / 11"
+            [attr.y]="PAD.top" [attr.height]="H - PAD.top - PAD.bottom"
+            (mouseenter)="hovered.set(i + 1)"></rect>
+        </svg>
+        <div *ngIf="hovered() as hi" class="tooltip" [style.left.%]="tipLeft(hi - 1)">
+          <strong>{{ o.monthly[hi - 1] }}</strong> {{ o.monthly[hi - 1] === 1 ? 'application' : 'applications' }}
+          <span>{{ months[hi - 1] }} {{ year }}</span>
+        </div>
+      </div>
+
+      <details class="table-view">
+        <summary>View as table</summary>
+        <table class="plain-table">
+          <thead><tr><th>Month</th><th>Applications</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let m of months; let i = index"><td>{{ m }}</td><td>{{ overview()?.monthly?.[i] ?? 0 }}</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </section>
+
+    <!-- Status breakdown -->
+    <section class="card panel">
+      <div class="panel-head">
+        <div>
+          <h2>Applications by Status</h2>
+          <p class="muted">Share of all {{ stats()?.total || 0 }} applications</p>
+        </div>
+      </div>
+      <p *ngIf="stats() && !statusBars().length" class="muted">No applications yet.</p>
+      <ul class="bars">
+        <li *ngFor="let b of statusBars()">
+          <a [routerLink]="b.status === 'Submitted' ? '/admin/review-queue' : '/admin/applications'" [queryParams]="b.status === 'Submitted' ? null : { status: b.status }" class="bar-row">
+            <span class="bar-label">{{ b.status }}</span>
+            <span class="bar-track"><span *ngIf="b.count" class="bar-fill" [style.width.%]="(b.count / maxBar()) * 100"></span></span>
+            <span class="bar-value">{{ b.count }} <span class="muted">({{ b.pct }}%)</span></span>
+          </a>
+        </li>
+      </ul>
+    </section>
+  </div>
+
+  <!-- Recent applications -->
+  <section class="card panel">
+    <div class="panel-head">
+      <h2>Recent Applications</h2>
+      <a routerLink="/admin/applications" class="link-btn view-all">View all</a>
+    </div>
+    <p *ngIf="overview() && !overview()!.recent.length" class="muted">No applications yet.</p>
+    <div *ngIf="overview()?.recent?.length" class="table-wrap">
+      <table class="plain-table recent">
+        <thead>
+          <tr><th>Application ID</th><th>Applicant</th><th>Program</th><th>Status</th><th>Date</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let a of overview()!.recent">
+            <td>{{ a.applicationId || '-' }}</td>
+            <td>{{ a.fullName }}</td>
+            <td>{{ a.program || a.department }}<br><small class="muted">{{ a.streamPreferences?.[0] }}</small></td>
+            <td><span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status }}</span></td>
+            <td>{{ (a.submittedAt || a.createdAt) | date:'dd MMM yyyy' }}</td>
+            <td class="right"><a [routerLink]="['/admin/applications', a._id]" class="link-btn">Open</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

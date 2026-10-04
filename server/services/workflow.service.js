@@ -5,7 +5,7 @@ const { nextSequence } = require('../models/Counter');
 const { ADMISSION_YEAR } = require('../config/admission.rules');
 const { ADMIN_TRANSITIONS, SYSTEM_TRANSITIONS, REMARKS_REQUIRED } = require('../config/status.rules');
 const { documentSlots } = require('./documents.service');
-const { sendEmail } = require('./notification.service');
+const { sendEmail, EMAIL_ENABLED } = require('./notification.service');
 const { generateAdmissionSlip } = require('./slip.service');
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
@@ -98,9 +98,12 @@ const transitionStatus = async (app, toStatus, actor, remarks = '') => {
   return app;
 };
 
-/** Emails the application ID, then the admission slip PDF. Delivery failures are logged, never thrown. */
+/**
+ * Emails the application ID, then the admission slip PDF. Delivery failures are logged, never thrown.
+ * Returns which emails actually reached the mail server (false when no mail server is configured).
+ */
 const sendSubmissionEmails = async (app) => {
-  await sendEmail({
+  const idMail = await sendEmail({
     application: app,
     type: 'APPLICATION_ID',
     to: app.email,
@@ -117,7 +120,7 @@ const sendSubmissionEmails = async (app) => {
   } catch (err) {
     console.error('[Slip] Generation failed:', err.message);
   }
-  await sendEmail({
+  const slipMail = await sendEmail({
     application: app,
     type: 'ADMISSION_SLIP',
     to: app.email,
@@ -125,6 +128,10 @@ const sendSubmissionEmails = async (app) => {
     text: `Dear ${app.fullName},\n\nPlease find your admission slip attached. Keep it for document verification.\n\nIEM Admissions`,
     attachments: pdf ? [{ filename: `Admission-Slip-${app.applicationId}.pdf`, content: pdf, contentType: 'application/pdf' }] : []
   });
+  return {
+    applicationId: EMAIL_ENABLED && idMail.delivered,
+    admissionSlip: EMAIL_ENABLED && slipMail.delivered && !!pdf
+  };
 };
 
 /**
@@ -169,8 +176,8 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
 
   await audit({ application: app._id, actorId, actorRole: 'applicant', action: 'PAYMENT_SUCCESS', details: `${paymentId} via ${method}, Rs. ${paid.amount / 100}` });
   await audit({ application: app._id, actorRole: 'system', action: 'STATUS_CHANGED', fromStatus: 'Payment Pending', toStatus: 'Submitted', details: `Application ID ${applicationId} issued` });
-  await sendSubmissionEmails(updated);
-  return { application: updated, alreadyProcessed: false };
+  const emails = await sendSubmissionEmails(updated);
+  return { application: updated, alreadyProcessed: false, emails };
 };
 
 module.exports = {

@@ -7,6 +7,8 @@ const { verifyToken, requireRole } = require('../middlewares/auth.middleware');
 // Every admin endpoint is enforced server-side; Angular guards are UX only
 router.use(verifyToken, requireRole('admin'));
 router.get('/stats', controller.getStats);
+router.get('/overview', controller.getOverview);
+router.get('/audit', controller.listAudit);
 router.get('/report.csv', controller.exportReport);
 router.get('/applications', controller.listApplications);
 router.get('/applications/:id', controller.getApplicationDetail);

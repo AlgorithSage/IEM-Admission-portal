@@ -139,6 +139,55 @@ const getStats = async (req, res, next) => {
   }
 };
 
+// @desc    Dashboard overview: monthly volume for a year and the latest applications
+// @route   GET /api/admin/overview?year=YYYY
+const getOverview = async (req, res, next) => {
+  try {
+    const year = Math.min(2100, Math.max(2000, parseInt(req.query.year, 10) || new Date().getFullYear()));
+    const from = new Date(Date.UTC(year, 0, 1));
+    const to = new Date(Date.UTC(year + 1, 0, 1));
+    const [months, recent, years] = await Promise.all([
+      Application.aggregate([
+        { $match: { createdAt: { $gte: from, $lt: to } } },
+        { $group: { _id: { $month: '$createdAt' }, count: { $sum: 1 } } }
+      ]),
+      Application.find({}).select('applicationId fullName program department streamPreferences status submittedAt createdAt').sort({ createdAt: -1 }).limit(6).lean(),
+      Application.aggregate([{ $group: { _id: { $year: '$createdAt' } } }, { $sort: { _id: -1 } }])
+    ]);
+    const monthly = Array.from({ length: 12 }, (_, i) => (months.find((m) => m._id === i + 1) || { count: 0 }).count);
+    res.status(200).json({
+      success: true,
+      overview: { year, monthly, recent, years: years.map((y) => y._id).filter(Boolean) }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Audit trail across all applications (newest first)
+// @route   GET /api/admin/audit?page=&limit=&action=
+const listAudit = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const filter = {};
+    if (req.query.action && /^[A-Z_]{3,40}$/.test(req.query.action)) filter.action = req.query.action;
+    const [items, total, actions] = await Promise.all([
+      AuditLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('application', 'applicationId fullName')
+        .lean(),
+      AuditLog.countDocuments(filter),
+      AuditLog.distinct('action')
+    ]);
+    res.status(200).json({ success: true, items, total, page, pages: Math.ceil(total / limit), actions: actions.sort() });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const csvCell = (v) => {
   let s = v === undefined || v === null ? '' : String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // neutralise spreadsheet formula injection
@@ -166,4 +215,4 @@ const exportReport = async (req, res, next) => {
   }
 };
 
-module.exports = { listApplications, getApplicationDetail, verifyDocument, updateStatus, getStats, exportReport };
+module.exports = { listApplications, getApplicationDetail, verifyDocument, updateStatus, getStats, getOverview, listAudit, exportReport };

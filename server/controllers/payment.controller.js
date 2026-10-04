@@ -91,7 +91,7 @@ const verifyPayment = async (req, res, next) => {
       throw httpError(400, 'Payment could not be verified. If money was debited it will be refunded automatically.');
     }
 
-    const { application, alreadyProcessed } = await completePayment({
+    const { application, alreadyProcessed, emails } = await completePayment({
       app,
       order,
       paymentId,
@@ -102,7 +102,8 @@ const verifyPayment = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: alreadyProcessed ? 'Payment was already confirmed.' : 'Payment successful. Application ID and admission slip have been emailed.',
+      message: alreadyProcessed ? 'Payment was already confirmed.' : 'Payment successful.',
+      emails: emails || null,
       application: serializeApplication(application)
     });
   } catch (error) {

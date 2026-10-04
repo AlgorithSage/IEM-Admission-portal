@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Upload = require('../models/Upload');
+const Draft = require('../models/Draft');
 const storage = require('../services/storage.service');
 const { httpError } = require('../services/workflow.service');
 
@@ -97,6 +98,28 @@ const confirmBlob = async (req, res, next) => {
   }
 };
 
+// @desc    Stream one of the caller's own staged uploads (used to view draft attachments)
+// @route   GET /api/uploads/:id/content
+const uploadContent = async (req, res, next) => {
+  try {
+    const upload = await Upload.findOne({ _id: req.params.id, owner: String(req.user.id) }).catch(() => null);
+    if (!upload) throw httpError(404, 'File not found.');
+    res.setHeader('Content-Type', upload.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(upload.originalName)}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    const ref = upload.storage === 'blob'
+      ? { storage: 'blob', fileName: upload.pathname, filePath: upload.key }
+      : { storage: 'local', fileName: upload.key };
+    const found = await storage.streamTo(ref, res);
+    if (!found) {
+      res.removeHeader('Content-Disposition');
+      throw httpError(410, 'This file is no longer available. Please upload it again.');
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Discard an upload the applicant replaced before submitting
 // @route   DELETE /api/uploads/:id
 const discardUpload = async (req, res, next) => {
@@ -114,7 +137,10 @@ const discardUpload = async (req, res, next) => {
 const cleanupStaleUploads = async (req, res, next) => {
   try {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const stale = await Upload.find({ consumedAt: null, createdAt: { $lt: cutoff } }).limit(500);
+    // Files referenced by a saved draft are kept until the draft is submitted
+    const drafts = await Draft.find({}).select('documents').lean();
+    const inDrafts = drafts.flatMap((d) => Object.values(d.documents || {}).map((doc) => doc && doc.uploadId)).filter(Boolean);
+    const stale = await Upload.find({ consumedAt: null, createdAt: { $lt: cutoff }, _id: { $nin: inDrafts } }).limit(500);
     for (const u of stale) await storage.remove(u);
     await Upload.deleteMany({ _id: { $in: stale.map((u) => u._id) } });
     res.status(200).json({ success: true, removed: stale.length });
@@ -123,4 +149,4 @@ const cleanupStaleUploads = async (req, res, next) => {
   }
 };
 
-module.exports = { getConfig, uploadLocal, blobToken, confirmBlob, discardUpload, cleanupStaleUploads };
+module.exports = { getConfig, uploadLocal, blobToken, confirmBlob, uploadContent, discardUpload, cleanupStaleUploads };

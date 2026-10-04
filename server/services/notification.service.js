@@ -84,4 +84,7 @@ const sendEmail = async ({ application, type, to, subject, text, attachments = [
   return { delivered: false, attempts: MAX_ATTEMPTS, error: lastError };
 };
 
-module.exports = { sendEmail, MAX_ATTEMPTS };
+// True when a real mail server is configured (otherwise messages are only recorded)
+const EMAIL_ENABLED = useSmtp;
+
+module.exports = { sendEmail, MAX_ATTEMPTS, EMAIL_ENABLED };

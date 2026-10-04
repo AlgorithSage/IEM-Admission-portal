@@ -50,6 +50,11 @@ export class UploadService {
     return res.upload;
   }
 
+  /** Content of one of the applicant's own uploads that is not attached to an application yet */
+  content(uploadId: string) {
+    return this.http.get(`${this.api}/uploads/${uploadId}/content`, { responseType: 'blob' });
+  }
+
   /** Best effort: frees storage for a file the applicant replaced before submitting */
   discard(uploadId: string): void {
     this.http.delete(`${this.api}/uploads/${uploadId}`).subscribe({ error: () => {} });

@@ -153,6 +153,14 @@ export interface AdminStats {
   paidCount: number;
 }
 
+export interface AdminOverview {
+  year: number;
+  /** Applications started per month (Jan..Dec) */
+  monthly: number[];
+  recent: ApplicationListItem[];
+  years: number[];
+}
+
 export interface PaymentRecord {
   orderId: string;
   amount: number;
@@ -181,6 +189,7 @@ export interface NotificationRecord {
 
 export interface AuditEntry {
   _id: string;
+  application?: { _id: string; applicationId?: string; fullName: string } | null;
   actorRole: 'applicant' | 'admin' | 'system';
   action: string;
   fromStatus?: string;

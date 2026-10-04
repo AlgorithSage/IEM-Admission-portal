@@ -27,6 +27,11 @@
         "label": "Marks",
         "min": -90,
         "max": 360
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^[A-Za-z0-9-]{4,20}$",
+        "hint": "As printed on your admit card or scorecard (4-20 letters or digits)."
       }
     },
     "JEE_MAIN": {
@@ -40,6 +45,11 @@
         "label": "Marks",
         "min": -75,
         "max": 300
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^\\d{12}$",
+        "hint": "12-digit NTA application number, as on your JEE Main scorecard."
       }
     },
     "WBJEE": {
@@ -53,6 +63,11 @@
         "label": "Marks",
         "min": -50,
         "max": 200
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^[A-Za-z0-9-]{4,20}$",
+        "hint": "As printed on your admit card or scorecard (4-20 letters or digits)."
       }
     },
     "IEMCET": {
@@ -66,6 +81,11 @@
         "label": "Marks",
         "min": -90,
         "max": 360
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^[A-Za-z0-9-]{4,20}$",
+        "hint": "As printed on your admit card or scorecard (4-20 letters or digits)."
       }
     },
     "CAT": {
@@ -76,6 +96,11 @@
         "label": "Percentile",
         "min": 0,
         "max": 100
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^[A-Za-z0-9-]{4,20}$",
+        "hint": "As printed on your admit card or scorecard (4-20 letters or digits)."
       }
     },
     "MAT": {
@@ -86,6 +111,11 @@
         "label": "Composite Score",
         "min": 0,
         "max": 800
+      },
+      "applicationNo": {
+        "label": "Application Number",
+        "pattern": "^[A-Za-z0-9-]{4,20}$",
+        "hint": "As printed on your admit card or scorecard (4-20 letters or digits)."
       }
     }
   },

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { switchMap } from 'rxjs';
-import { ApplicationService } from '../../../core/services/application.service';
+import { ApplicationService, PaymentEmails } from '../../../core/services/application.service';
 import { Application, PaymentOrder } from '../../../models/application.model';
 import { apiError, downloadBlob, errorMessage } from '../../../core/utils/file.util';
 
@@ -25,6 +25,8 @@ export class PaymentComponent implements OnInit {
   readonly error = signal('');
   readonly info = signal('');
   readonly downloading = signal(false);
+  /** Set only right after a payment in this visit; null when the page is opened later */
+  readonly emails = signal<PaymentEmails | null>(null);
   method = 'UPI';
 
   constructor(private applicationService: ApplicationService, private router: Router) {}
@@ -85,6 +87,7 @@ export class PaymentComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.application.set(res.application);
+          this.emails.set(res.emails);
           this.info.set(res.message || '');
           this.stage.set('done');
         },

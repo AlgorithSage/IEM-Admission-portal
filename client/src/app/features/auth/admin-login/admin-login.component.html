@@ -23,9 +23,8 @@
             class="form-control" 
             formControlName="email" 
             placeholder="admin@iem.edu.in"
-            [class.is-invalid]="getEmailFeedback()?.isValid === false"
-            [class.is-valid]="getEmailFeedback()?.isValid === true">
-          <div *ngIf="getEmailFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+            [class.is-invalid]="getEmailFeedback()?.isValid === false">
+          <div *ngIf="getEmailFeedback()?.isValid === false && getEmailFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>
@@ -39,8 +38,7 @@
               class="form-control" 
               formControlName="password" 
               placeholder="Password"
-              [class.is-invalid]="getPasswordFeedback()?.isValid === false"
-              [class.is-valid]="getPasswordFeedback()?.isValid === true">
+              [class.is-invalid]="getPasswordFeedback()?.isValid === false">
             <button 
               type="button" 
               class="btn-toggle-eye" 
@@ -50,7 +48,7 @@
               <i [class]="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
             </button>
           </div>
-          <div *ngIf="getPasswordFeedback() as fb" [hidden]="fb.isValid" class="bva-feedback invalid">
+          <div *ngIf="getPasswordFeedback()?.isValid === false && getPasswordFeedback() as fb" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
             <span class="bva-message">{{ fb.message }}</span>
           </div>

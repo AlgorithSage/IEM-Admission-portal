@@ -29,10 +29,15 @@ if (!process.env.MONGO_URI) {
   console.error('MONGO_URI is not set in server/.env');
   process.exit(1);
 }
-const mongoUrl = new URL(process.env.MONGO_URI);
-const baseDb = mongoUrl.pathname.replace('/', '') || 'iem_admission_portal';
-mongoUrl.pathname = `/${baseDb}_e2e`;
-const E2E_MONGO_URI = mongoUrl.toString();
+// Point the same cluster at a separate <db>_e2e database. String-based: WHATWG URL cannot parse
+// multi-host mongodb:// strings, and its errors would print the credentials.
+const uriMatch = process.env.MONGO_URI.match(/^(mongodb(?:\+srv)?:\/\/[^/]+)\/?([^?]*)(\?.*)?$/);
+if (!uriMatch) {
+  console.error('MONGO_URI is not a valid MongoDB connection string.');
+  process.exit(1);
+}
+const baseDb = uriMatch[2] || 'iem_admission_portal';
+const E2E_MONGO_URI = `${uriMatch[1]}/${baseDb}_e2e${uriMatch[3] || ''}`;
 
 let passed = 0;
 let failed = 0;
@@ -84,7 +89,7 @@ const applicationBody = (overrides = {}) => ({
   classXII: { board: 'CBSE', school: 'South Point School', stream: 'Science (PCM)', passingYear: 2025, percentage: '90.2', pcmPercentage: '93' },
   competitiveExams: [
     { exam: 'WBJEE', rollNumber: 'WB2025123', year: 2025, rank: 1520, score: '-12.25' },
-    { exam: 'JEE_MAIN', rollNumber: 'JEE2025123', year: 2025, rank: 45210, score: 180 }
+    { exam: 'JEE_MAIN', rollNumber: '250310123456', year: 2025, rank: 45210, score: 180 }
   ],
   documents: overrides.documents
 });
@@ -172,6 +177,25 @@ const register = async (email, extra = {}) =>
     // ---------------- Applicant: submit ----------------
     console.log('\nApplicant: form + documents');
     check('no application before submitting', (await api('GET', '/applications/my-application', { token: tokenA })).data.application === null);
+    // Draft: save, reload, ownership of referenced files
+    check('no draft initially', (await api('GET', '/applications/my-draft', { token: tokenA })).data.draft === null);
+    const draftFile = await uploadFile(tokenA, 'draft-x', 'draft-x.pdf');
+    const foreignFile = await uploadFile(tokenB, 'foreign', 'foreign.pdf');
+    const saved = await api('PUT', '/applications/my-draft', {
+      token: tokenA,
+      json: {
+        data: { fullName: 'Riya Banerjee', program: 'B.Tech', declaration: true },
+        documents: { classXMarksheet: { uploadId: draftFile }, classXIIMarksheet: { uploadId: foreignFile }, 'bad slot': { uploadId: draftFile } },
+        step: 'classX'
+      }
+    });
+    check('draft saved', saved.status === 200);
+    const loaded = (await api('GET', '/applications/my-draft', { token: tokenA })).data.draft;
+    check('draft returns values, step and own documents only', loaded.data.fullName === 'Riya Banerjee' && loaded.step === 'classX' && loaded.documents.classXMarksheet?.name === 'draft-x.pdf' && !loaded.documents.classXIIMarksheet && Object.keys(loaded.documents).length === 1);
+    check('declaration is not kept in a draft', loaded.data.declaration === undefined);
+    check('draft file can be read back by its owner', (await api('GET', `/uploads/${draftFile}/content`, { token: tokenA })).status === 200);
+    check("another user's staged file cannot be read", (await api('GET', `/uploads/${foreignFile}/content`, { token: tokenA })).status === 404);
+
     const cfg = await api('GET', '/uploads/config', { token: tokenA });
     check('upload config reports local driver (no Blob token in test env)', cfg.data.driver === 'local' && cfg.data.maxBytes === 5242880);
     const docsA = await uploadAll(tokenA);
@@ -183,12 +207,18 @@ const register = async (email, extra = {}) =>
     const otherUser = await uploadFile(tokenB, 'b', 'b.pdf');
     const stolen = await api('POST', '/applications', { token: tokenA, json: applicationBody({ email: emailA, documents: { ...docsA, classXMarksheet: otherUser } }) });
     check("cannot attach another user's upload", stolen.status === 400);
+    const samePhone = await api('POST', '/applications', { token: tokenA, json: { ...applicationBody({ email: emailA, documents: docsA }), alternatePhone: '9830012345' } });
+    check('alternate mobile equal to mobile -> 400', samePhone.status === 400 && /different from the mobile/.test(samePhone.data.message));
+    const badAppNo = applicationBody({ email: emailA, documents: docsA });
+    badAppNo.competitiveExams = [{ ...badAppNo.competitiveExams[1], rollNumber: 'JEE2025123' }, badAppNo.competitiveExams[0]];
+    check('JEE Main application number must be 12 digits', (await api('POST', '/applications', { token: tokenA, json: badAppNo })).status === 400);
     const sub = await api('POST', '/applications', { token: tokenA, json: applicationBody({ email: emailA, documents: docsA }) });
     check('uploads released after failed attempt; submit -> 201', sub.status === 201, JSON.stringify(sub.data).slice(0, 300));
     const app = sub.data.application || {};
     check('status is Payment Pending, no ID yet', app.status === 'Payment Pending' && !app.applicationId);
     check('4 documents listed, all Pending', app.documents?.length === 4 && app.documents.every((d) => d.verification.status === 'Pending'));
     check('no public file URLs stored', app.documents?.every((d) => !d.filePath));
+    check('draft deleted after submission', (await api('GET', '/applications/my-draft', { token: tokenA })).data.draft === null);
     check('second submission -> 409', (await api('POST', '/applications', { token: tokenA, json: applicationBody({ email: emailA, documents: docsA }) })).status === 409);
     const reuse = await api('PUT', '/applications/my-application/documents/classXMarksheet', { token: tokenA, json: { uploadId: docsA.classXMarksheet } });
     check('consumed upload cannot be reused', reuse.status === 400);
@@ -219,6 +249,8 @@ const register = async (email, extra = {}) =>
     const verify = await api('POST', '/payments/verify', { token: tokenA, json: { ...ok.data, method: 'Card' } });
     const paidApp = verify.data.application || {};
     check('verified payment -> Submitted', verify.status === 200 && paidApp.status === 'Submitted', JSON.stringify(verify.data).slice(0, 300));
+    const mailFlags = verify.data.emails || {};
+    check('payment response reports email delivery', process.env.E2E_USE_SMTP ? mailFlags.applicationId === true && mailFlags.admissionSlip === true : mailFlags.applicationId === false && mailFlags.admissionSlip === false, JSON.stringify(verify.data.emails));
     check('application ID issued (IEM-YYYY-BT-NNNNNN)', /^IEM-\d{4}-BT-\d{6}$/.test(paidApp.applicationId || ''), paidApp.applicationId);
     check('payment summary stored', paidApp.payment?.status === 'Paid' && paidApp.payment.amount === 1000 && paidApp.payment.method === 'Card');
     const replay = await api('POST', '/payments/verify', { token: tokenA, json: { ...ok.data, method: 'Card' } });

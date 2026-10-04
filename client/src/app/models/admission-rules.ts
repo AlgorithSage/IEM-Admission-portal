@@ -18,6 +18,8 @@ export interface CompetitiveExamRule {
   rank: Range | null;
   /** Marks, percentile or composite score; may be negative where negative marking applies */
   score: Range & { label: string };
+  /** Identifier the applicant enters (the exam's application number) and its format */
+  applicationNo: { label: string; pattern: string; hint: string };
 }
 
 export const COMPETITIVE_EXAMS: CompetitiveExamRule[] = Object.entries(catalogue.exams).map(([code, rule]) => ({

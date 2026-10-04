@@ -1,4 +1,4 @@
-<header class="iem-navbar">
+<header class="iem-navbar" [class.app-mode]="authService.isAuthenticated()">
   <div class="container nav-container">
     <!-- Brand Logo & Institutional Title -->
     <a routerLink="/" class="nav-brand">
@@ -29,28 +29,7 @@
       </a>
     </nav>
 
-    <!-- Center Navigation Links: Authenticated Applicant -->
-    <nav class="nav-links auth-nav-links" *ngIf="authService.isApplicant()">
-      <a routerLink="/applicant/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item auth-nav-item">
-        <i class="fa-solid fa-gauge-high"></i> Dashboard
-      </a>
-      <a routerLink="/applicant/apply" routerLinkActive="active" class="nav-item auth-nav-item">
-        <i class="fa-solid fa-file-pen"></i> Admission Form
-      </a>
-      <a routerLink="/applicant/status" routerLinkActive="active" class="nav-item auth-nav-item">
-        <i class="fa-solid fa-chart-line"></i> Status & Details
-      </a>
-    </nav>
-
-    <!-- Center Navigation Links: Authenticated Admin -->
-    <nav class="nav-links auth-nav-links" *ngIf="authService.isAdmin()">
-      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item auth-nav-item">
-        <i class="fa-solid fa-table-list"></i> Scrutiny Desk
-      </a>
-      <a routerLink="/" class="nav-item auth-nav-item">
-        <i class="fa-solid fa-globe"></i> Public Portal
-      </a>
-    </nav>
+    <!-- Signed-in navigation lives in the sidebar (AppShellComponent) -->
 
     <!-- Right Side Actions & Profile Widget -->
     <div class="nav-actions">

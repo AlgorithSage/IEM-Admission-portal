@@ -12,11 +12,12 @@ import {
 } from '@angular/forms';
 import { Application } from '../../../models/application.model';
 import { Router, RouterModule } from '@angular/router';
-import { Subscription, debounceTime } from 'rxjs';
-import { apiError } from '../../../core/utils/file.util';
+import { Subscription, debounceTime, filter } from 'rxjs';
+import { apiError, openBlobInNewTab } from '../../../core/utils/file.util';
 import { UploadService } from '../../../core/services/upload.service';
+import { CITIES_BY_STATE } from '../../../models/india-cities';
 import { AuthService } from '../../../core/services/auth.service';
-import { ApplicationService } from '../../../core/services/application.service';
+import { ApplicationService, ApplicationDraft, DraftDocument } from '../../../core/services/application.service';
 import { BvaValidatorService, ValidationFeedback } from '../../../core/services/bva-validator.service';
 import {
   ACADEMIC_RULES,
@@ -38,19 +39,49 @@ const PREF_KEYS = ['pref1', 'pref2', 'pref3'] as const;
 
 type UploadField = 'classXMarksheet' | 'classXIIMarksheet' | 'graduationMarksheet' | `scorecard_${CompetitiveExamCode}`;
 
+/** A document slot: chosen file (this visit) or a file restored from a saved draft */
 interface UploadState {
   status: 'uploading' | 'done' | 'error';
   uploadId?: string;
   error?: string;
+  name: string;
+  size: number;
+  type: string;
 }
+
+type StepId = 'program' | 'personal' | 'address' | 'parents' | 'classX' | 'classXII' | 'graduation' | 'exams' | 'declaration' | 'review';
+type StepStatus = 'current' | 'done' | 'error' | 'todo';
+type FormErrorKey = 'yearGap' | 'parentContact' | 'noExam' | 'duplicateStream' | 'graduationGap' | 'samePhone';
+
+interface StepDef {
+  id: StepId;
+  title: string;
+  /** Form controls (paths) that belong to this phase */
+  controls: string[];
+  /** Cross-field errors shown in this phase */
+  errors: FormErrorKey[];
+}
+
+const STEPS: StepDef[] = [
+  { id: 'program', title: 'Program & Stream', controls: ['program', 'streamPrefs'], errors: ['duplicateStream'] },
+  { id: 'personal', title: 'Personal & Contact', controls: ['fullName', 'dob', 'gender', 'category', 'nationality', 'email', 'phone', 'alternatePhone'], errors: ['samePhone'] },
+  { id: 'address', title: 'Address', controls: ['address', 'city', 'state', 'pincode'], errors: [] },
+  { id: 'parents', title: 'Parent / Guardian', controls: ['parents'], errors: ['parentContact'] },
+  { id: 'classX', title: 'Class X', controls: ['classX'], errors: [] },
+  { id: 'classXII', title: 'Class XII', controls: ['classXII'], errors: ['yearGap'] },
+  { id: 'graduation', title: 'Graduation', controls: ['graduation'], errors: ['graduationGap'] },
+  { id: 'exams', title: 'Entrance Exams', controls: ['exams'], errors: ['noExam'] },
+  { id: 'declaration', title: 'Declaration', controls: ['declaration'], errors: [] },
+  { id: 'review', title: 'Review & Submit', controls: [], errors: [] }
+];
+
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface ChosenStream {
   ordinal: string;
   stream: StreamOption;
   reasons: string[];
 }
-
-const DRAFT_PREFIX = 'iem-application-draft:';
 
 @Component({
   selector: 'app-application-form',
@@ -64,11 +95,22 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   submitAttempted = false;
-  /** 'form' while filling in, 'review' for the final check before submission */
-  step: 'form' | 'review' = 'form';
-  draftRestored = false;
+
+  /** Phase on screen; phases the applicant has opened; phases where Next was pressed */
+  readonly current = signal<StepId>('program');
+  private readonly visited = signal<Set<StepId>>(new Set(['program']));
+  private readonly attempted = signal<Set<StepId>>(new Set());
+
+  /** Draft ("Save as draft") state */
+  readonly draftLoaded = signal(false);
+  readonly draftRestored = signal(false);
+  /** Phases before this one were filled in an earlier session (restored draft) */
+  private resumeIndex = 0;
+  readonly saveState = signal<SaveState>('idle');
+  readonly savedAt = signal<Date | null>(null);
   private draftSub?: Subscription;
 
+  /** Files chosen during this visit (kept for instant local preview) */
   files: Partial<Record<UploadField, File>> = {};
   fileErrors: Partial<Record<UploadField, string>> = {};
   /** Upload progress per document; files upload as soon as they are chosen */
@@ -83,6 +125,8 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
   readonly exams = COMPETITIVE_EXAMS;
   readonly rules = ACADEMIC_RULES;
   readonly alreadySubmittedApp = signal<Application | null>(null);
+  /** False until we know whether the applicant already has an application */
+  readonly appChecked = signal(false);
   // Human-readable labels used in the "missing fields" summary
   private readonly labels: Record<string, string> = {
     fullName: 'Full Name',
@@ -137,7 +181,7 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     COMPETITIVE_EXAMS.forEach((exam) => {
       examGroups[exam.code] = this.fb.group({
         selected: [false],
-        rollNumber: [{ value: '', disabled: true }, v((x) => this.validateRollNumber(x, exam.label))],
+        rollNumber: [{ value: '', disabled: true }, v((x) => this.validateApplicationNo(x, exam))],
         year: [{ value: 2026, disabled: true }, v((x) => bva.validateRange(x, `${exam.label} exam year`, examYear.min, examYear.max, { integer: true }))],
         rank: [{ value: '', disabled: true }, v((x) => (exam.rank ? bva.validateRange(x, `${exam.label} rank`, exam.rank.min, exam.rank.max, { integer: true }) : this.ok()))],
         score: [{ value: '', disabled: true }, v((x) => bva.validateRange(x, `${exam.label} ${exam.score.label.toLowerCase()}`, exam.score.min, exam.score.max, { maxDecimals: 2 }))]
@@ -158,7 +202,7 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
 
         // Address
         address: ['', v((x) => bva.validateAddress(x))],
-        city: ['', v((x) => bva.validateText(x, 'City', 2, 50, true))],
+        city: ['', v((x) => this.validateCity(x))],
         state: ['West Bengal', Validators.required],
         pincode: ['', v((x) => bva.validatePincode(x))],
 
@@ -221,6 +265,7 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
           this.parentContactValidator,
           this.atLeastOneExamValidator,
           this.distinctStreamsValidator,
+          this.alternatePhoneValidator,
           this.graduationGapValidator,
           this.eligibilityValidator
         ]
@@ -234,7 +279,9 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
         if (res.application && res.application._id) {
           this.alreadySubmittedApp.set(res.application);
         }
-      }
+        this.appChecked.set(true);
+      },
+      error: () => this.appChecked.set(true)
     });
 
     // Program change resets stream choices and opens as many preference slots as the program allows
@@ -275,54 +322,205 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
       });
     });
 
-    this.restoreDraft();
-    this.draftSub = this.appForm.valueChanges.pipe(debounceTime(600)).subscribe(() => this.saveDraft());
+    this.applicationService.getDraft().subscribe({
+      next: (draft) => {
+        if (draft) this.restoreDraft(draft);
+        this.startAutosave();
+      },
+      error: () => this.startAutosave()
+    });
   }
 
   ngOnDestroy(): void {
     this.draftSub?.unsubscribe();
   }
 
-  // ---------- Draft (save / resume). Text fields only: files cannot be stored in the browser ----------
+  // ---------- Phases ----------
 
-  private get draftKey(): string {
-    return DRAFT_PREFIX + (this.authService.currentUser()?._id || 'anonymous');
+  /** Phases for the current choices (Graduation only for postgraduate streams) */
+  get steps(): StepDef[] {
+    return STEPS.filter((st) => st.id !== 'graduation' || this.needsGraduation);
   }
 
-  private saveDraft(): void {
-    try {
-      const { declaration, ...values } = this.appForm.getRawValue();
-      localStorage.setItem(this.draftKey, JSON.stringify({ savedAt: Date.now(), values }));
-    } catch {
-      /* storage unavailable (private mode / quota): drafts are a convenience only */
+  stepNumber(id: StepId): number {
+    return this.steps.findIndex((st) => st.id === id) + 1;
+  }
+
+  get currentStep(): StepDef {
+    return this.steps.find((st) => st.id === this.current()) || this.steps[0];
+  }
+
+  isStep(id: StepId): boolean {
+    return this.current() === id;
+  }
+
+  private stepUploads(id: StepId): UploadField[] {
+    if (id === 'classX') return ['classXMarksheet'];
+    if (id === 'classXII') return ['classXIIMarksheet'];
+    if (id === 'graduation') return ['graduationMarksheet'];
+    if (id === 'exams') return COMPETITIVE_EXAMS.filter((e) => this.isExamSelected(e.code)).map((e) => this.scorecardField(e.code));
+    return [];
+  }
+
+  /** True when every field, cross-field rule and document of a phase is complete */
+  stepValid(id: StepId): boolean {
+    if (id === 'review') return false;
+    const def = STEPS.find((st) => st.id === id)!;
+    const controlsOk = def.controls.every((path) => {
+      const ctrl = this.appForm.get(path);
+      return !ctrl || ctrl.disabled || ctrl.valid;
+    });
+    const errorsOk = def.errors.every((key) => !this.appForm.errors?.[key]);
+    const uploadsOk = this.stepUploads(id).every((f) => this.uploadState()[f]?.status === 'done');
+    return controlsOk && errorsOk && uploadsOk;
+  }
+
+  stepStatus(id: StepId): StepStatus {
+    if (this.current() === id) return 'current';
+    if (id === 'review') return 'todo';
+    const seen = this.visited().has(id) || this.steps.findIndex((st) => st.id === id) < this.resumeIndex;
+    if (!seen) return 'todo';
+    return this.stepValid(id) ? 'done' : 'error';
+  }
+
+  get completedSteps(): number {
+    return this.steps.filter((st) => st.id !== 'review' && this.stepValid(st.id)).length;
+  }
+
+  /** Jump to any phase from the progress panel */
+  goTo(id: StepId): void {
+    if (id === 'review') {
+      this.onReview();
+      return;
+    }
+    this.errorMessage.set('');
+    this.show(id);
+  }
+
+  next(): void {
+    const id = this.current();
+    this.touchStep(id);
+    if (!this.stepValid(id)) {
+      this.errorMessage.set('Please complete or correct the highlighted fields before continuing.');
+      this.scrollToForm();
+      return;
+    }
+    this.errorMessage.set('');
+    const list = this.steps;
+    const following = list[list.findIndex((st) => st.id === id) + 1];
+    if (following.id === 'review') {
+      this.onReview();
+    } else {
+      this.show(following.id);
+    }
+    this.saveDraft(true);
+  }
+
+  back(): void {
+    const list = this.steps;
+    const i = list.findIndex((st) => st.id === this.current());
+    if (i > 0) {
+      this.errorMessage.set('');
+      this.show(list[i - 1].id);
     }
   }
 
-  private restoreDraft(): void {
-    let draft: { values: any } | null = null;
-    try {
-      draft = JSON.parse(localStorage.getItem(this.draftKey) || 'null');
-    } catch {
-      draft = null;
-    }
-    if (!draft?.values) return;
-    const { program, exams, ...rest } = draft.values;
+  get isFirstStep(): boolean {
+    return this.steps[0].id === this.current();
+  }
+
+  get isLastInputStep(): boolean {
+    const list = this.steps;
+    return list[list.length - 2]?.id === this.current();
+  }
+
+  private show(id: StepId): void {
+    this.current.set(id);
+    this.visited.update((set) => new Set(set).add(id));
+    this.scrollToForm();
+  }
+
+  /** Marks a phase's fields as touched so their messages appear, and records the attempt */
+  private touchStep(id: StepId): void {
+    const def = STEPS.find((st) => st.id === id)!;
+    def.controls.forEach((path) => this.appForm.get(path)?.markAllAsTouched());
+    this.attempted.update((set) => new Set(set).add(id));
+    this.stepUploads(id).forEach((field) => {
+      if (!this.uploadState()[field]) this.fileErrors[field] = 'Please upload this document.';
+    });
+  }
+
+  private stepOfError(key: FormErrorKey): StepId {
+    return STEPS.find((st) => st.errors.includes(key))!.id;
+  }
+
+  private scrollToForm(): void {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- Draft ----------
+
+  private startAutosave(): void {
+    this.draftLoaded.set(true);
+    if (this.alreadySubmittedApp()) return;
+    // Save quietly a few seconds after the applicant stops typing
+    this.draftSub = this.appForm.valueChanges
+      .pipe(
+        filter(() => !this.alreadySubmittedApp()),
+        debounceTime(3000)
+      )
+      .subscribe(() => this.saveDraft(true));
+  }
+
+  private draftDocuments(): Record<string, DraftDocument> {
+    const docs: Record<string, DraftDocument> = {};
+    Object.entries(this.uploadState()).forEach(([field, st]) => {
+      if (st?.status === 'done' && st.uploadId) docs[field] = { uploadId: st.uploadId, name: st.name, type: st.type, size: st.size };
+    });
+    return docs;
+  }
+
+  /** Saves the form (and attached documents) as a draft on the server */
+  saveDraft(quiet = false): void {
+    if (this.alreadySubmittedApp() || !this.draftLoaded()) return;
+    this.saveState.set('saving');
+    const { declaration, ...data } = this.appForm.getRawValue();
+    this.applicationService.saveDraft({ data, documents: this.draftDocuments(), step: this.current() }).subscribe({
+      next: () => {
+        this.saveState.set('saved');
+        this.savedAt.set(new Date());
+      },
+      error: () => {
+        // Quiet autosaves fail silently; an explicit save reports the problem
+        this.saveState.set(quiet ? 'idle' : 'error');
+      }
+    });
+  }
+
+  private restoreDraft(draft: ApplicationDraft): void {
+    const { program, exams, ...rest } = draft.data || {};
     // Order matters: program and exam toggles enable dependent controls before values are applied
     if (program) this.appForm.get('program')!.setValue(program);
     COMPETITIVE_EXAMS.forEach((e) => {
       if (exams?.[e.code]?.selected) this.examGroup(e.code).get('selected')!.setValue(true);
     });
-    this.appForm.patchValue({ ...rest, exams });
+    this.appForm.patchValue({ ...rest, ...(exams ? { exams } : {}) });
     this.syncGraduationSection();
-    this.draftRestored = true;
-  }
 
-  clearDraft(): void {
-    try {
-      localStorage.removeItem(this.draftKey);
-    } catch {
-      /* ignore */
+    const docs: Partial<Record<UploadField, UploadState>> = {};
+    Object.entries(draft.documents || {}).forEach(([field, d]) => {
+      docs[field as UploadField] = { status: 'done', uploadId: d.uploadId, name: d.name, size: d.size, type: d.type };
+    });
+    this.uploadState.set(docs);
+
+    const resumeAt = STEPS.find((st) => st.id === draft.step && st.id !== 'review');
+    if (resumeAt) {
+      this.current.set(resumeAt.id);
+      this.resumeIndex = this.steps.findIndex((st) => st.id === resumeAt.id);
     }
+    this.draftRestored.set(true);
+    this.savedAt.set(draft.updatedAt ? new Date(draft.updatedAt) : null);
+    this.saveState.set('saved');
   }
 
   // ---------- Validation helpers ----------
@@ -344,15 +542,46 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     return res.isValid ? res : { ...res, message: `${label}: ${res.message}` };
   }
 
-  private validateRollNumber(val: string, examLabel: string): ValidationFeedback {
+  private validateApplicationNo(val: string, exam: CompetitiveExamRule): ValidationFeedback {
     const clean = (val || '').trim();
     if (!clean) {
-      return { isValid: false, message: `${examLabel} roll / application number is required.`, rule: 'Required', severity: 'error' };
+      return { isValid: false, message: `${exam.label} application number is required.`, rule: 'Required', severity: 'error' };
     }
-    if (!/^[A-Za-z0-9-]{4,20}$/.test(clean)) {
-      return { isValid: false, message: 'Use 4–20 letters, digits or hyphens.', rule: 'Invalid Format', severity: 'error' };
+    if (!new RegExp(exam.applicationNo.pattern).test(clean)) {
+      return { isValid: false, message: exam.applicationNo.hint, rule: 'Invalid Format', severity: 'error' };
     }
     return this.ok();
+  }
+
+  private validateCity(val: string): ValidationFeedback {
+    const clean = (val || '').trim();
+    if (!clean) return { isValid: false, message: 'City / town is required.', rule: 'Required', severity: 'error' };
+    if (!/^[A-Za-z][A-Za-z\s.'()-]{1,49}$/.test(clean)) {
+      return { isValid: false, message: 'Enter a valid city or town name (letters only).', rule: 'Invalid', severity: 'error' };
+    }
+    return this.ok();
+  }
+
+  private alternatePhoneValidator: ValidatorFn = (form: AbstractControl): ValidationErrors | null => {
+    const norm = (v: string) => (v || '').trim().replace(/^(\+91|91)/, '').replace(/[\s-]/g, '');
+    const alt = norm(form.get('alternatePhone')?.value);
+    return alt && alt === norm(form.get('phone')?.value) ? { samePhone: true } : null;
+  };
+
+  /** Suggestions for the city field, based on the selected state */
+  get cityOptions(): string[] {
+    return CITIES_BY_STATE[this.appForm.get('state')?.value] || [];
+  }
+
+  /** Date-of-birth bounds for the eligible age range (16 to 35 years) */
+  readonly dobMax = this.yearsAgo(16);
+  readonly dobMin = this.yearsAgo(36, 1);
+
+  private yearsAgo(years: number, plusDays = 0): string {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - years);
+    d.setDate(d.getDate() + plusDays);
+    return d.toISOString().slice(0, 10);
   }
 
   private yearGapValidator: ValidatorFn = (form: AbstractControl): ValidationErrors | null => {
@@ -466,9 +695,9 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     return !!ctrl && ctrl.enabled && ctrl.valid && (ctrl.touched || ctrl.dirty) && ctrl.value !== '' && ctrl.value !== null;
   }
 
-  formError(key: 'yearGap' | 'parentContact' | 'noExam' | 'duplicateStream' | 'graduationGap'): boolean {
+  formError(key: FormErrorKey): boolean {
     if (!this.appForm.errors?.[key]) return false;
-    if (this.submitAttempted || key === 'duplicateStream') return true;
+    if (this.submitAttempted || this.attempted().has(this.stepOfError(key)) || key === 'duplicateStream' || key === 'samePhone') return true;
     if (key === 'graduationGap') return !!this.appForm.get('graduation.passingYear')?.dirty;
     if (key === 'yearGap') return !!(this.appForm.get('classX.passingYear')?.dirty || this.appForm.get('classXII.passingYear')?.dirty);
     if (key === 'parentContact') return !!(this.appForm.get('parents.fatherPhone')?.touched && this.appForm.get('parents.motherPhone')?.touched);
@@ -553,8 +782,20 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     return `scorecard_${code}`;
   }
 
-  fileFor(field: UploadField): File | undefined {
-    return this.files[field];
+  /** The document in a slot (chosen now or restored from a draft) */
+  docFor(field: UploadField): UploadState | undefined {
+    return this.uploadState()[field];
+  }
+
+  /** Opens a document: the local file if chosen in this visit, otherwise the uploaded copy */
+  viewDoc(field: UploadField): void {
+    const local = this.files[field];
+    if (local) {
+      this.previewFile(local);
+      return;
+    }
+    const uploadId = this.uploadState()[field]?.uploadId;
+    if (uploadId) openBlobInNewTab(this.uploadService.content(uploadId), (msg) => (this.fileErrors[field] = msg));
   }
 
   fileErrorFor(field: UploadField): string {
@@ -603,7 +844,8 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     }
     this.removeFile(field);
     this.files[field] = file;
-    this.setUploadState(field, { status: 'uploading' });
+    const meta = { name: file.name, size: file.size, type: file.type };
+    this.setUploadState(field, { status: 'uploading', ...meta });
     this.uploadService
       .upload(file, field)
       .then((staged) => {
@@ -612,11 +854,12 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
           this.uploadService.discard(staged.uploadId);
           return;
         }
-        this.setUploadState(field, { status: 'done', uploadId: staged.uploadId });
+        this.setUploadState(field, { status: 'done', uploadId: staged.uploadId, ...meta });
+        this.saveDraft(true);
       })
       .catch((err) => {
         if (this.files[field] !== file) return;
-        this.setUploadState(field, { status: 'error', error: apiError(err, 'Upload failed. Choose the file again.') });
+        this.setUploadState(field, { status: 'error', error: apiError(err, 'Upload failed. Choose the file again.'), ...meta });
       });
   }
 
@@ -655,12 +898,13 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     if (this.appForm.errors?.['yearGap']) missing.push(`Class XII year must be ${ACADEMIC_RULES.minYearGap}+ years after Class X`);
     if (this.appForm.errors?.['noExam']) missing.push('At least one Competitive Exam');
     if (this.appForm.errors?.['duplicateStream']) missing.push('Stream preferences must be different');
+    if (this.appForm.errors?.['samePhone']) missing.push('Alternate mobile number must differ from the mobile number');
     if (this.appForm.errors?.['graduationGap']) missing.push(`Graduation year must be ${ACADEMIC_RULES.minGraduationGap}+ years after Class XII`);
     this.eligibilityErrors.forEach((e) => missing.push(`Not eligible: ${e}`));
 
     COMPETITIVE_EXAMS.filter((e) => this.isExamSelected(e.code)).forEach((e) => {
       const g = this.examGroup(e.code);
-      const names: Record<string, string> = { rollNumber: 'Roll Number', year: 'Year', rank: 'Rank', score: e.score.label };
+      const names: Record<string, string> = { rollNumber: 'Application Number', year: 'Year', rank: 'Rank', score: e.score.label };
       ['rollNumber', 'year', 'rank', 'score'].forEach((k) => {
         if (g.enabled && g.get(k)?.enabled && g.get(k)?.invalid) missing.push(`${e.label} ${names[k]}`);
       });
@@ -668,15 +912,15 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
 
     this.requiredUploads().forEach(({ field, label }) => {
       const status = this.uploadStatus(field);
-      if (this.files[field] && status === 'uploading') {
+      if (status === 'uploading') {
         missing.push(`${label} (still uploading)`);
         return;
       }
-      if (this.files[field] && status === 'error') {
+      if (status === 'error') {
         missing.push(`${label} (upload failed, choose the file again)`);
         return;
       }
-      if (!this.files[field]) {
+      if (!status) {
         missing.push(label);
         this.fileErrors[field] = `${label} upload is required.`;
       }
@@ -692,18 +936,21 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     const missing = this.collectMissing();
     if (this.appForm.invalid || missing.length > 0) {
       this.appForm.markAllAsTouched();
+      this.steps.forEach((st) => this.visited.update((set) => new Set(set).add(st.id)));
+      // Take the applicant to the first phase that needs attention
+      const firstBad = this.steps.find((st) => st.id !== 'review' && !this.stepValid(st.id));
+      const target = firstBad?.id || (this.eligibilityErrors.length ? 'program' : this.current());
+      this.show(target === 'review' ? 'program' : target);
       this.errorMessage.set(`Please complete or correct the following: ${missing.join(', ')}.`);
-      window.scrollTo({ top: 120, behavior: 'smooth' });
       return;
     }
-    this.step = 'review';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.errorMessage.set('');
+    this.show('review');
   }
 
   backToEdit(): void {
-    this.step = 'form';
     this.errorMessage.set('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.show('declaration');
   }
 
   // ---------- Review helpers ----------
@@ -726,8 +973,8 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
       }));
   }
 
-  get reviewDocuments(): { field: UploadField; label: string; file: File }[] {
-    return this.requiredUploads().map((u) => ({ ...u, file: this.files[u.field] as File }));
+  get reviewDocuments(): { field: UploadField; label: string; doc: UploadState | undefined }[] {
+    return this.requiredUploads().map((u) => ({ ...u, doc: this.uploadState()[u.field] }));
   }
 
   /** Opens a locally selected file so the applicant can check it before submitting */
@@ -773,7 +1020,6 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     this.applicationService.submitApplication(body).subscribe({
       next: () => {
         this.loading.set(false);
-        this.clearDraft();
         this.router.navigate(['/applicant/payment']);
       },
       error: (err) => {

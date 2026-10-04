@@ -1,21 +1,14 @@
-<div class="dashboard-page">
-  <div class="container dashboard-container">
-    <!-- Welcome Header Banner -->
-    <div class="welcome-banner card">
-      <div class="banner-left">
-        <div class="avatar-circle">
-          <i class="fa-solid fa-user-graduate"></i>
-        </div>
-        <div class="welcome-text">
-                    <h2>Welcome back, {{ authService.currentUser()?.name }}!</h2>
-          <p>{{ authService.currentUser()?.email }} &bull; Registered Candidate</p>
-        </div>
+<div class="shell-page">
+  <div class="dashboard-container">
+    <!-- Page header -->
+    <div class="page-head dash-head">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Welcome, {{ authService.currentUser()?.name }}</p>
       </div>
-      <div class="banner-right">
-        <div class="app-status-box" *ngIf="!loading()">
-          <span class="status-label">Current Status</span>
-          <span class="status-pill" [ngClass]="statusClass">{{ application()?.status || 'Not Started' }}</span>
-        </div>
+      <div *ngIf="!loading()" class="dash-status">
+        <span class="muted">Status</span>
+        <span class="status-pill" [ngClass]="statusClass">{{ application()?.status || 'Not Started' }}</span>
       </div>
     </div>
 

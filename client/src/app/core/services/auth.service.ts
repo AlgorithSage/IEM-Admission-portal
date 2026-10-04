@@ -26,7 +26,8 @@ export class AuthService {
   }
 
   public isAuthenticated(): boolean {
-    return !!this.token && !!this.currentUser();
+    // Read the signal first: templates only re-render on login/logout if the signal is always read
+    return !!this.currentUser() && !!this.token;
   }
 
   public isAdmin(): boolean {

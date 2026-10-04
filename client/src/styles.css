@@ -4,6 +4,9 @@
    ========================================================================== */
 
 :root {
+  /* Height of the sticky top navigation bar */
+  --nav-height: 73px;
+
   /* Brand Primary Colors (Extracted directly from landing page.png) */
   --iem-gold: #f59e0b;
   --iem-gold-hover: #d97706;
@@ -325,10 +328,6 @@ button, input, select, textarea {
    BVA (BOUNDARY VALUE ANALYSIS) & EQUIVALENCE PARTITIONING RUNTIME FEEDBACK
    ========================================================================== */
 
-.form-control.is-valid {
-  border-color: #10b981;
-  background-color: #f0fdf4;
-}
 
 .bva-feedback {
   display: flex;
@@ -531,4 +530,96 @@ button, input, select, textarea {
   .plain-table td {
     padding: 6px;
   }
+}
+
+/* The hidden attribute must win over component display rules */
+[hidden] {
+  display: none !important;
+}
+
+/* (i) info tip: shows on hover, and on tap / keyboard focus */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.info-tip:hover,
+.info-tip:focus {
+  color: var(--iem-gold-hover);
+  outline: none;
+}
+
+.info-tip-text {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: max-content;
+  max-width: min(320px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-white);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+.info-tip:hover .info-tip-text,
+.info-tip:focus .info-tip-text,
+.info-tip:focus-within .info-tip-text {
+  display: block;
+}
+
+.info-tip-text .info-line {
+  display: block;
+  margin-top: 4px;
+}
+
+/* Page container inside the applicant shell (the shell provides the outer padding) */
+.shell-page {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.page-head {
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.page-head p {
+  margin-top: 4px;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+/* Visually hidden, still read by screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

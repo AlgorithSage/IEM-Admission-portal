@@ -1,4 +1,5 @@
 const Application = require('../models/Application');
+const Draft = require('../models/Draft');
 const { audit } = require('../models/AuditLog');
 const { validateApplication } = require('../validators/application.validator');
 const { COMPETITIVE_EXAMS } = require('../config/admission.rules');
@@ -80,6 +81,7 @@ const submitApplication = async (req, res, next) => {
     }).save();
 
     claimed = null;
+    await Draft.deleteOne({ owner: String(req.user.id) }).catch(() => {});
     await audit({ application: app._id, actorId: req.user.id, actorRole: 'applicant', action: 'APPLICATION_CREATED', details: `${data.program}: ${data.streamPreferences.join(' > ')}` });
 
     res.status(201).json({ success: true, message: 'Form and documents saved. Proceed to payment.', application: serializeApplication(app) });

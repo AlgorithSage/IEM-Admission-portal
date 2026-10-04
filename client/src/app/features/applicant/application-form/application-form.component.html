@@ -1,39 +1,40 @@
-<div class="apply-page">
-  <div class="container apply-container">
-    <!-- Header -->
-    <div class="form-header-card card">
-      <div class="header-left">
-        <div class="header-badge">
-          <i class="fa-solid fa-file-pen"></i>
-        </div>
-        <div>
-          <h2>IEM Admission Application Form</h2>
-          <p>Academic Year 2026–2027 &bull; Institute of Engineering & Management</p>
-        </div>
+<div class="shell-page">
+  <div class="apply-container">
+    <!-- Page header -->
+    <div class="page-head head-row">
+      <div>
+        <h1>Application Form</h1>
+        <p>Fill in each section carefully. Fields marked <span class="required">*</span> are required.</p>
       </div>
-      <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">
-        <i class="fa-solid fa-arrow-left"></i> Dashboard
-      </a>
-    </div>
-
-    <!-- Existing Application Alert -->
-    <div *ngIf="alreadySubmittedApp() as existing" class="alert alert-info">
-      <i class="fa-solid fa-circle-info"></i>
-      <div style="flex: 1;">
-        You already have an application for {{ existing.program || existing.department }} (status: <strong>{{ existing.status }}</strong>).
+      <div *ngIf="appChecked() && !alreadySubmittedApp()" class="draft-actions">
+        <span *ngIf="saveState() !== 'idle'" class="save-status" [ngSwitch]="saveState()" aria-live="polite">
+          <ng-container *ngSwitchCase="'saving'">Saving...</ng-container>
+          <ng-container *ngSwitchCase="'saved'">Draft saved {{ savedAt() | date:'h:mm a' }}</ng-container>
+          <span *ngSwitchCase="'error'" class="text-red">Could not save draft</span>
+        </span>
+        <button type="button" class="btn btn-outline btn-sm" (click)="saveDraft()" [disabled]="saveState() === 'saving' || !draftLoaded()">
+          <i class="fa-regular fa-floppy-disk"></i> Save Draft
+        </button>
       </div>
-      <a *ngIf="existing.status === 'Payment Pending'" routerLink="/applicant/payment" class="btn btn-sm btn-primary">Pay Fee</a>
-      <a *ngIf="existing.status !== 'Payment Pending'" routerLink="/applicant/status" class="btn btn-sm btn-dark">View Status</a>
     </div>
 
-    <div *ngIf="draftRestored && step === 'form' && !alreadySubmittedApp()" class="alert alert-info">
-      <i class="fa-solid fa-floppy-disk"></i>
-      <span>Your saved draft was restored. Please attach the documents again before reviewing.</span>
-    </div>
+    <p *ngIf="!appChecked()" class="muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
 
-    <div *ngIf="errorMessage()" class="alert alert-error" role="alert">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <span>{{ errorMessage() }}</span>
+    <!-- Already applied: show the submitted application instead of a new form -->
+    <div *ngIf="alreadySubmittedApp() as existing" class="card submitted-card">
+      <h2 class="section-title">Your application has been submitted</h2>
+      <table class="plain-table">
+        <tr><th>Application ID</th><td><strong>{{ existing.applicationId || 'Issued after the fee is paid' }}</strong></td></tr>
+        <tr><th>Program</th><td>{{ existing.program || existing.department }}</td></tr>
+        <tr *ngIf="existing.streamPreferences?.length"><th>Stream Preferences</th><td>{{ existing.streamPreferences!.join(' > ') }}</td></tr>
+        <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + existing.status.toLowerCase().replace(' ', '-')">{{ existing.status }}</span></td></tr>
+        <tr *ngIf="existing.submittedAt"><th>Submitted On</th><td>{{ existing.submittedAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
+      </table>
+      <p class="muted small-note">Each applicant can submit one application. To change it, contact the admission office on 8010700500.</p>
+      <div class="actions">
+        <a routerLink="/applicant/status" class="btn btn-outline">View Application</a>
+        <a *ngIf="existing.status === 'Payment Pending'" routerLink="/applicant/payment" class="btn btn-primary">Pay Application Fee</a>
+      </div>
     </div>
 
     <!-- Reusable upload widget -->
@@ -45,7 +46,7 @@
         </div>
 
         <div
-          *ngIf="!fileFor(field)"
+          *ngIf="!docFor(field)"
           class="upload-dropzone compact"
           [class.has-error]="fileErrorFor(field)"
           (drop)="onFileDrop(field, $event)"
@@ -65,7 +66,7 @@
           </label>
         </div>
 
-        <div *ngIf="fileFor(field) as f" class="uploaded-pill">
+        <div *ngIf="docFor(field) as f" class="uploaded-pill">
           <div class="file-info-box">
             <i class="fa-solid" [ngClass]="f.type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file-image'"></i>
             <div>
@@ -80,6 +81,7 @@
               </span>
             </div>
           </div>
+          <button type="button" class="link-btn" (click)="viewDoc(field)" [disabled]="f.status === 'uploading'" [attr.aria-label]="'View ' + title">View</button>
           <button type="button" class="btn-remove-file" (click)="removeFile(field)" [attr.aria-label]="'Remove ' + title">
             <i class="fa-solid fa-trash-can"></i>
           </button>
@@ -92,15 +94,36 @@
       </div>
     </ng-template>
 
+    <div *ngIf="appChecked() && !alreadySubmittedApp()" class="form-layout">
+    <div class="form-main">
+    <div *ngIf="draftRestored() && !alreadySubmittedApp() && !isStep('review')" class="alert alert-info">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <span>Your saved draft has been restored. Continue where you left off.</span>
+    </div>
+
+    <div *ngIf="errorMessage()" class="alert alert-error" role="alert">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
     <!-- Main Form Card -->
-    <div class="form-card card" [hidden]="step !== 'form'">
-      <form [formGroup]="appForm" (ngSubmit)="onReview()" novalidate>
+    <div class="form-card card" [hidden]="isStep('review')">
+      <form [formGroup]="appForm" (ngSubmit)="next()" novalidate>
 
         <!-- SECTION: Program & Stream -->
-        <div class="form-section">
+        <div *ngIf="isStep('program')" class="form-section">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Program &amp; Stream</h3>
+            <h2 class="section-title">{{ stepNumber('program') }}. Program &amp; Stream</h2>
+            <span *ngIf="selectedProgram as sp" class="info-tip" tabindex="0" role="note" aria-label="Eligibility for this program">
+              <i class="fa-solid fa-circle-info"></i>
+              <span class="info-tip-text">
+                <strong>Minimum marks for {{ sp.name }}</strong>
+                <span *ngFor="let st of sp.streams" class="info-line">
+                  {{ st.name }}: Class X {{ st.eligibility.classX }}%, XII {{ st.eligibility.classXII }}%<ng-container *ngIf="st.eligibility.pcm">, PCM {{ st.eligibility.pcm }}%</ng-container><ng-container *ngIf="st.eligibility.graduation">, Graduation {{ st.eligibility.graduation }}%</ng-container>
+                </span>
+                <span class="info-line">You can rank up to {{ sp.maxPreferences }} stream{{ sp.maxPreferences > 1 ? 's' : '' }}.</span>
+              </span>
+            </span>
           </div>
 
           <div class="form-grid-2">
@@ -127,14 +150,14 @@
             </ng-container>
           </div>
 
-          <ul *ngIf="chosenStreams.length" class="stream-notes">
-            <li *ngFor="let c of chosenStreams; trackBy: trackByStream">
-              <strong>{{ c.stream.name }}</strong>: minimum Class X {{ c.stream.eligibility.classX }}%, XII {{ c.stream.eligibility.classXII }}%<span *ngIf="c.stream.eligibility.pcm">, PCM {{ c.stream.eligibility.pcm }}%</span><span *ngIf="c.stream.eligibility.graduation">, Graduation {{ c.stream.eligibility.graduation }}%</span>
-              <span *ngIf="c.reasons.length && (submitAttempted || appForm.get('classXII.percentage')?.dirty)" class="stream-ineligible">
-                Not eligible: needs {{ c.reasons.join(', ') }}
-              </span>
-            </li>
-          </ul>
+          <ng-container *ngIf="submitAttempted || appForm.get('classXII.percentage')?.dirty">
+            <div *ngFor="let c of chosenStreams; trackBy: trackByStream">
+              <div *ngIf="c.reasons.length" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="bva-text">Not eligible for {{ c.stream.name }}: needs {{ c.reasons.join(', ') }}.</span>
+              </div>
+            </div>
+          </ng-container>
 
           <div *ngIf="formError('duplicateStream')" class="bva-feedback invalid">
             <i class="fa-solid fa-circle-exclamation"></i>
@@ -143,10 +166,9 @@
         </div>
 
         <!-- SECTION: Personal Information -->
-        <div class="form-section">
+        <div *ngIf="isStep('personal')" class="form-section">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Personal Information</h3>
+            <h2 class="section-title">{{ stepNumber('personal') }}. Personal Information</h2>
           </div>
 
           <div class="form-grid-2">
@@ -160,7 +182,7 @@
 
             <div class="form-group">
               <label class="form-label" for="dob">Date of Birth <span class="required">*</span></label>
-              <input id="dob" type="date" class="form-control" formControlName="dob"
+              <input id="dob" type="date" class="form-control" formControlName="dob" [min]="dobMin" [max]="dobMax"
                 [class.is-invalid]="err('dob')" [class.is-valid]="isValid('dob')">
               <div *ngIf="err('dob') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
@@ -175,11 +197,10 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="category">Category <span class="required">*</span></label>
+              <label class="form-label" for="category">Category <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="More information"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">A category certificate may be requested at document verification.</span></span></label>
               <select id="category" class="form-control" formControlName="category">
                 <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
               </select>
-              <span class="field-hint">Certificate may be requested at document verification.</span>
             </div>
 
             <div class="form-group">
@@ -209,17 +230,19 @@
             <div class="form-group">
               <label class="form-label" for="alternatePhone">Alternate Mobile Number</label>
               <input id="alternatePhone" type="tel" class="form-control" formControlName="alternatePhone" placeholder="Optional"
-                [class.is-invalid]="err('alternatePhone')">
+                [class.is-invalid]="err('alternatePhone') || formError('samePhone')">
               <div *ngIf="err('alternatePhone') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
+              <div *ngIf="!err('alternatePhone') && formError('samePhone')" class="bva-feedback invalid">
+                <i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">Alternate mobile number must be different from the mobile number.</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- SECTION: Address -->
-        <div class="form-section">
+        <div *ngIf="isStep('address')" class="form-section">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Permanent Address</h3>
+            <h2 class="section-title">{{ stepNumber('address') }}. Permanent Address</h2>
           </div>
 
           <div class="form-grid-2">
@@ -232,8 +255,11 @@
 
             <div class="form-group">
               <label class="form-label" for="city">City / Town <span class="required">*</span></label>
-              <input id="city" type="text" class="form-control" formControlName="city" placeholder="e.g. Kolkata"
+              <input id="city" type="text" class="form-control" formControlName="city" list="city-options" autocomplete="address-level2" placeholder="Select or type your city"
                 [class.is-invalid]="err('city')" [class.is-valid]="isValid('city')">
+              <datalist id="city-options">
+                <option *ngFor="let c of cityOptions" [value]="c"></option>
+              </datalist>
               <div *ngIf="err('city') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
 
@@ -254,10 +280,9 @@
         </div>
 
         <!-- SECTION: Parent / Guardian -->
-        <div class="form-section" formGroupName="parents">
+        <div *ngIf="isStep('parents')" class="form-section" formGroupName="parents">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Parent / Guardian Details</h3>
+            <h2 class="section-title">{{ stepNumber('parents') }}. Parent / Guardian Details</h2>
           </div>
 
           <div class="form-grid-3">
@@ -323,10 +348,9 @@
         </div>
 
         <!-- SECTION: Class X -->
-        <div class="form-section" formGroupName="classX">
+        <div *ngIf="isStep('classX')" class="form-section" formGroupName="classX">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Class X (Secondary) Details</h3>
+            <h2 class="section-title">{{ stepNumber('classX') }}. Class X (Secondary) Details</h2>
           </div>
 
           <div class="form-grid-2">
@@ -352,11 +376,10 @@
               <div *ngIf="err('classX.passingYear') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="xPct">Aggregate Percentage (%) <span class="required">*</span></label>
+              <label class="form-label" for="xPct">Aggregate Percentage (%) <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="More information"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">Between {{ rules.classX.percentage.min }} and 100, up to 2 decimals.</span></span></label>
               <input id="xPct" type="number" step="0.01" class="form-control" formControlName="percentage" placeholder="e.g. 88.40"
                 [min]="rules.classX.percentage.min" max="100"
                 [class.is-invalid]="err('classX.percentage')" [class.is-valid]="isValid('classX.percentage')">
-              <span class="field-hint">Range {{ rules.classX.percentage.min }}–100, up to 2 decimals</span>
               <div *ngIf="err('classX.percentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
           </div>
@@ -365,10 +388,9 @@
         </div>
 
         <!-- SECTION: Class XII -->
-        <div class="form-section" formGroupName="classXII">
+        <div *ngIf="isStep('classXII')" class="form-section" formGroupName="classXII">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Class XII (Higher Secondary) Details</h3>
+            <h2 class="section-title">{{ stepNumber('classXII') }}. Class XII (Higher Secondary) Details</h2>
           </div>
 
           <div class="form-grid-2">
@@ -404,16 +426,15 @@
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="xiiPct">Aggregate Percentage (%) <span class="required">*</span></label>
+              <label class="form-label" for="xiiPct">Aggregate Percentage (%) <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="More information"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">Between {{ rules.classXII.percentage.min }} and 100, up to 2 decimals. Each stream has its own minimum (see Program &amp; Stream).</span></span></label>
               <input id="xiiPct" type="number" step="0.01" class="form-control" formControlName="percentage" placeholder="e.g. 91.25"
                 [min]="rules.classXII.percentage.min" max="100"
                 [class.is-invalid]="err('classXII.percentage')" [class.is-valid]="isValid('classXII.percentage')">
-              <span class="field-hint">Minimum {{ rules.classXII.percentage.min }}% for eligibility</span>
               <div *ngIf="err('classXII.percentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="xiiPcm">Physics, Chemistry &amp; Maths (%)</label>
-              <input id="xiiPcm" type="number" step="0.01" min="0" max="100" class="form-control" formControlName="pcmPercentage" placeholder="Optional — for B.Tech"
+              <label class="form-label" for="xiiPcm">Physics, Chemistry &amp; Maths (%) <span class="info-tip" tabindex="0" role="note" aria-label="More information"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">Required for B.Tech streams that set a PCM minimum. Between 0 and 100.</span></span></label>
+              <input id="xiiPcm" type="number" step="0.01" min="0" max="100" class="form-control" formControlName="pcmPercentage" placeholder="Optional"
                 [class.is-invalid]="err('classXII.pcmPercentage')">
               <div *ngIf="err('classXII.pcmPercentage') as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
             </div>
@@ -428,10 +449,9 @@
         </div>
 
         <!-- SECTION: Graduation (PG programs only) -->
-        <div *ngIf="needsGraduation" class="form-section" formGroupName="graduation">
+        <div *ngIf="isStep('graduation') && needsGraduation" class="form-section" formGroupName="graduation">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Graduation Details</h3>
+            <h2 class="section-title">{{ stepNumber('graduation') }}. Graduation Details</h2>
           </div>
 
           <div class="form-grid-2">
@@ -469,10 +489,18 @@
         </div>
 
         <!-- SECTION: Competitive Exams -->
-        <div class="form-section" formGroupName="exams">
+        <div *ngIf="isStep('exams')" class="form-section" formGroupName="exams">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Competitive Entrance Exams</h3>
+            <h2 class="section-title">{{ stepNumber('exams') }}. Competitive Entrance Exams</h2>
+            <span *ngIf="acceptedExams.length" class="info-tip" tabindex="0" role="note" aria-label="Exam details">
+              <i class="fa-solid fa-circle-info"></i>
+              <span class="info-tip-text">
+                <span *ngFor="let ex of acceptedExams" class="info-line">
+                  <strong>{{ ex.label }}</strong>: <ng-container *ngIf="ex.rank">rank 1 to {{ ex.rank.max | number }}, </ng-container>{{ ex.score.label | lowercase }} {{ ex.score.min }} to {{ ex.score.max }}<ng-container *ngIf="ex.score.min < 0"> (negative marking applies)</ng-container>.
+                </span>
+                <span class="info-line">Scores allow up to 2 decimals.</span>
+              </span>
+            </span>
           </div>
           <p class="section-intro" *ngIf="!selectedProgram">Select a program first to see the accepted entrance exams.</p>
           <p class="section-intro" *ngIf="selectedProgram">
@@ -487,15 +515,12 @@
                   <strong>{{ exam.label }}</strong>
                   <small>{{ exam.conductedBy }}</small>
                 </span>
-                <span class="exam-limits">
-                  <ng-container *ngIf="exam.rank">Rank 1–{{ exam.rank.max | number }} &bull; </ng-container>{{ exam.score.label }} {{ exam.score.min }} to {{ exam.score.max }}
-                </span>
               </label>
 
               <div *ngIf="isExamSelected(exam.code)" class="exam-body">
                 <div class="form-grid-2">
                   <div class="form-group">
-                    <label class="form-label" [for]="exam.code + '-roll'">Roll / Application No. <span class="required">*</span></label>
+                    <label class="form-label" [for]="exam.code + '-roll'">Application Number <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="Format"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">{{ exam.applicationNo.hint }}</span></span></label>
                     <input [id]="exam.code + '-roll'" type="text" class="form-control" formControlName="rollNumber"
                       [class.is-invalid]="err(['exams', exam.code, 'rollNumber'])">
                     <div *ngIf="err(['exams', exam.code, 'rollNumber']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
@@ -508,18 +533,17 @@
                     <div *ngIf="err(['exams', exam.code, 'year']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
                   </div>
                   <div class="form-group" *ngIf="exam.rank">
-                    <label class="form-label" [for]="exam.code + '-rank'">Rank <span class="required">*</span></label>
+                    <label class="form-label" [for]="exam.code + '-rank'">Rank <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="Allowed range"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">Whole number from 1 to {{ exam.rank!.max | number }}.</span></span></label>
                     <input [id]="exam.code + '-rank'" type="number" step="1" class="form-control" formControlName="rank"
-                      [min]="exam.rank!.min" [max]="exam.rank!.max" [placeholder]="'1 – ' + (exam.rank!.max | number)"
+                      [min]="exam.rank!.min" [max]="exam.rank!.max"
                       [class.is-invalid]="err(['exams', exam.code, 'rank'])" [class.is-valid]="isValid(['exams', exam.code, 'rank'])">
                     <div *ngIf="err(['exams', exam.code, 'rank']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" [for]="exam.code + '-score'">{{ exam.score.label }} <span class="required">*</span></label>
+                    <label class="form-label" [for]="exam.code + '-score'">{{ exam.score.label }} <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="Allowed range"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">From {{ exam.score.min }} to {{ exam.score.max }}, up to 2 decimals.<ng-container *ngIf="exam.score.min < 0"> Enter your raw marks; negative values are allowed.</ng-container></span></span></label>
                     <input [id]="exam.code + '-score'" type="number" step="0.01" class="form-control" formControlName="score"
-                      [min]="exam.score.min" [max]="exam.score.max" [placeholder]="exam.score.min + ' to ' + exam.score.max"
+                      [min]="exam.score.min" [max]="exam.score.max"
                       [class.is-invalid]="err(['exams', exam.code, 'score'])" [class.is-valid]="isValid(['exams', exam.code, 'score'])">
-                    <span *ngIf="exam.score.min < 0" class="field-hint">Raw score, negative allowed, up to 2 decimals</span>
                     <div *ngIf="err(['exams', exam.code, 'score']) as e" class="bva-feedback invalid"><i class="fa-solid fa-circle-exclamation"></i><span class="bva-text">{{ e }}</span></div>
                   </div>
                 </div>
@@ -536,10 +560,9 @@
         </div>
 
         <!-- SECTION: Declaration -->
-        <div class="form-section last">
+        <div *ngIf="isStep('declaration')" class="form-section last">
           <div class="section-title-wrap">
-            <span class="section-num"></span>
-            <h3>Declaration</h3>
+            <h2 class="section-title">{{ stepNumber('declaration') }}. Declaration</h2>
           </div>
 
           <label class="declaration-box" [class.is-invalid]="err('declaration')">
@@ -555,25 +578,15 @@
           </div>
         </div>
 
-        <!-- Form Submit Bar -->
-        <div class="form-submit-bar">
-          <div class="terms-note">
-            <i class="fa-solid fa-circle-info text-gold"></i>
-            <span>
-              {{ selectedExamCount }} exam{{ selectedExamCount === 1 ? '' : 's' }} selected &bull;
-              Fields marked <span class="required">*</span> are mandatory.
-            </span>
-          </div>
-
-          <div *ngIf="errorMessage()" class="alert alert-error mb-3" style="width: 100%;" role="alert">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <span>{{ errorMessage() }}</span>
-          </div>
-
-          <div class="submit-actions">
-            <a routerLink="/applicant/dashboard" class="btn btn-outline">Cancel</a>
-            <button type="submit" class="btn btn-primary btn-lg" [disabled]="alreadySubmittedApp()">
-              Review Application
+        <!-- Phase navigation -->
+        <div class="step-footer">
+          <button type="button" class="btn btn-outline" (click)="back()" [style.visibility]="isFirstStep ? 'hidden' : 'visible'">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <div class="step-footer-right">
+            <span class="step-count">Step {{ stepNumber(current()) }} of {{ steps.length }}</span>
+            <button type="button" class="btn btn-primary" (click)="next()" [disabled]="alreadySubmittedApp()">
+              {{ isLastInputStep ? 'Review Application' : 'Save & Continue' }} <i class="fa-solid fa-arrow-right"></i>
             </button>
           </div>
         </div>
@@ -581,17 +594,17 @@
     </div>
 
     <!-- Final review before submission -->
-    <div *ngIf="step === 'review'" class="form-card card review">
-      <h3 class="review-title">Review your application</h3>
-      <p class="section-intro">Check every detail and document. Use <strong>Edit</strong> to change anything. You cannot edit after submitting.</p>
+    <div *ngIf="isStep('review')" class="form-card card review">
+      <h2 class="section-title">{{ stepNumber('review') }}. Review &amp; Submit</h2>
+      <p class="section-intro">Check every detail and document. Use <strong>Edit</strong> to change a section. You cannot edit after submitting.</p>
 
-      <h4 class="subsection-title">Program &amp; Stream</h4>
+      <h4 class="subsection-title review-head">Program &amp; Stream <button type="button" class="link-btn" (click)="goTo('program')">Edit</button></h4>
       <table class="review-table">
         <tr><th>Applying For</th><td>{{ v.program }}</td></tr>
         <tr *ngFor="let c of chosenStreams; trackBy: trackByStream"><th>{{ c.ordinal }} Preference</th><td>{{ c.stream.name }}</td></tr>
       </table>
 
-      <h4 class="subsection-title">Personal &amp; Contact</h4>
+      <h4 class="subsection-title review-head">Personal &amp; Contact <button type="button" class="link-btn" (click)="goTo('personal')">Edit</button></h4>
       <table class="review-table">
         <tr><th>Full Name</th><td>{{ v.fullName }}</td></tr>
         <tr><th>Date of Birth</th><td>{{ v.dob | date:'dd MMM yyyy' }}</td></tr>
@@ -602,35 +615,37 @@
         <tr><th>Address</th><td>{{ v.address }}, {{ v.city }}, {{ v.state }} - {{ v.pincode }}</td></tr>
       </table>
 
-      <h4 class="subsection-title">Parent / Guardian</h4>
+      <h4 class="subsection-title review-head">Parent / Guardian <button type="button" class="link-btn" (click)="goTo('parents')">Edit</button></h4>
       <table class="review-table">
         <tr><th>Father</th><td>{{ v.parents.fatherName }}<span *ngIf="v.parents.fatherPhone">, {{ v.parents.fatherPhone }}</span><span *ngIf="v.parents.fatherOccupation">, {{ v.parents.fatherOccupation }}</span></td></tr>
         <tr><th>Mother</th><td>{{ v.parents.motherName }}<span *ngIf="v.parents.motherPhone">, {{ v.parents.motherPhone }}</span><span *ngIf="v.parents.motherOccupation">, {{ v.parents.motherOccupation }}</span></td></tr>
         <tr *ngIf="v.parents.guardianName"><th>Guardian</th><td>{{ v.parents.guardianName }}<span *ngIf="v.parents.guardianRelation"> ({{ v.parents.guardianRelation }})</span><span *ngIf="v.parents.guardianPhone">, {{ v.parents.guardianPhone }}</span></td></tr>
       </table>
 
-      <h4 class="subsection-title">Academics</h4>
+      <h4 class="subsection-title review-head">Academics <button type="button" class="link-btn" (click)="goTo('classX')">Edit</button></h4>
       <table class="review-table">
         <tr><th>Class X</th><td>{{ v.classX.board }}, {{ v.classX.school }}, {{ v.classX.passingYear }} - {{ v.classX.percentage }}%</td></tr>
         <tr><th>Class XII</th><td>{{ v.classXII.board }}, {{ v.classXII.school }}, {{ v.classXII.stream }}, {{ v.classXII.passingYear }} - {{ v.classXII.percentage }}%<span *ngIf="v.classXII.pcmPercentage">, PCM {{ v.classXII.pcmPercentage }}%</span></td></tr>
         <tr *ngIf="needsGraduation"><th>Graduation</th><td>{{ v.graduation.degree }}, {{ v.graduation.university }}, {{ v.graduation.passingYear }} - {{ v.graduation.percentage }}%</td></tr>
       </table>
 
-      <h4 class="subsection-title">Entrance Exams</h4>
+      <h4 class="subsection-title review-head">Entrance Exams <button type="button" class="link-btn" (click)="goTo('exams')">Edit</button></h4>
       <table class="review-table">
         <tr *ngFor="let e of reviewExams; trackBy: trackByLabel">
           <th>{{ e.label }} {{ e.year }}</th>
-          <td>Roll {{ e.rollNumber }}<span *ngIf="e.rank">, Rank {{ e.rank | number }}</span>, {{ e.scoreLabel }} {{ e.score }}</td>
+          <td>Application No. {{ e.rollNumber }}<span *ngIf="e.rank">, Rank {{ e.rank | number }}</span>, {{ e.scoreLabel }} {{ e.score }}</td>
         </tr>
       </table>
 
-      <h4 class="subsection-title">Documents</h4>
+      <h4 class="subsection-title review-head">Documents <button type="button" class="link-btn" (click)="goTo('classX')">Edit</button></h4>
       <table class="review-table">
         <tr *ngFor="let d of reviewDocuments; trackBy: trackByField">
           <th>{{ d.label }}</th>
           <td>
-            {{ d.file.name }} ({{ (d.file.size / 1024) | number:'1.0-1' }} KB)
-            <button type="button" class="link-btn" (click)="previewFile(d.file)">View</button>
+            <ng-container *ngIf="d.doc as doc">
+              {{ doc.name }} ({{ (doc.size / 1024) | number:'1.0-1' }} KB)
+              <button type="button" class="link-btn" (click)="viewDoc(d.field)">View</button>
+            </ng-container>
           </td>
         </tr>
       </table>
@@ -646,6 +661,38 @@
           <span *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Submitting...</span>
         </button>
       </div>
+    </div>
+    </div>
+
+    <!-- Progress panel: status of each phase, click to move between phases -->
+    <aside class="progress-panel" aria-label="Application progress">
+      <div class="card progress-card">
+        <div class="progress-head">
+          <h3>Application Progress</h3>
+          <span class="progress-count">{{ completedSteps }} of {{ steps.length - 1 }} complete</span>
+        </div>
+        <ol class="step-list">
+          <li *ngFor="let st of steps; let i = index">
+            <button type="button" class="step-link" [ngClass]="'is-' + stepStatus(st.id)" (click)="goTo(st.id)"
+              [attr.aria-current]="stepStatus(st.id) === 'current' ? 'step' : null" [disabled]="!!alreadySubmittedApp()">
+              <span class="step-dot" aria-hidden="true">
+                <i *ngIf="stepStatus(st.id) === 'done'" class="fa-solid fa-check"></i>
+                <i *ngIf="stepStatus(st.id) === 'error'" class="fa-solid fa-exclamation"></i>
+                <ng-container *ngIf="stepStatus(st.id) === 'current' || stepStatus(st.id) === 'todo'">{{ i + 1 }}</ng-container>
+              </span>
+              <span class="step-name">{{ st.title }}</span>
+              <span class="sr-only">({{ stepStatus(st.id) === 'error' ? 'needs attention' : stepStatus(st.id) }})</span>
+            </button>
+          </li>
+        </ol>
+      </div>
+
+      <div class="card help-card">
+        <h3>Need help?</h3>
+        <p>Admission helpline: <a href="tel:8010700500">8010700500</a></p>
+        <p>Your progress is saved as a draft automatically.</p>
+      </div>
+    </aside>
     </div>
   </div>
 </div>

@@ -1,68 +1,9 @@
-.dashboard-page {
-  padding: 40px 0 60px;
-  background-color: var(--bg-cream);
-  min-height: calc(100vh - 76px);
-}
-
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  gap: 28px;
-}
-
-/* Welcome Banner */
-.welcome-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 28px 32px;
-  background: linear-gradient(135deg, #ffffff 0%, #fffdf8 100%);
-  border: 1px solid var(--border-light);
-}
-
-.banner-left {
-  display: flex;
-  align-items: center;
   gap: 20px;
 }
 
-.avatar-circle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: var(--iem-gold);
-  color: #111827;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  flex-shrink: 0;
-}
-
-.welcome-text h2 {
-  font-size: 1.65rem;
-  color: #111827;
-  margin-bottom: 2px;
-}
-
-.welcome-text p {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.app-status-box {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.status-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #6b7280;
-}
 
 /* Progress Tracker */
 .progress-section {
@@ -143,12 +84,8 @@
 }
 
 @media (max-width: 900px) {
-  .welcome-banner {
+  .dash-head {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  .app-status-box {
     align-items: flex-start;
   }
   .steps-tracker {
@@ -159,4 +96,19 @@
   .step-connector {
     display: none;
   }
+}
+
+.dash-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.dash-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
 }

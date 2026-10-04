@@ -1,24 +1,24 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { NavBadgeService } from '../../../core/services/nav-badge.service';
 import { Subject, Subscription, debounceTime } from 'rxjs';
 import { ApplicationService, ListFilter } from '../../../core/services/application.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { AdminStats, APPLICATION_STATUSES, ApplicationListItem, ApplicationStatus } from '../../../models/application.model';
+import { APPLICATION_STATUSES, ApplicationListItem } from '../../../models/application.model';
 import { DEPARTMENTS } from '../../../models/admission-rules';
 import { apiError, downloadBlob, errorMessage } from '../../../core/utils/file.util';
 
 @Component({
-  selector: 'app-admin-dashboard',
+  selector: 'app-application-list',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css']
+  templateUrl: './application-list.component.html',
+  styleUrls: ['./application-list.component.css']
 })
-export class AdminDashboardComponent implements OnInit, OnDestroy {
+export class ApplicationListComponent implements OnInit, OnDestroy {
   // Signals: state set in HTTP callbacks must notify OnPush/zoneless change detection (Angular 22)
-  readonly stats = signal<AdminStats | null>(null);
   readonly applications = signal<ApplicationListItem[]>([]);
   readonly total = signal(0);
   readonly pages = signal(1);
@@ -38,7 +38,24 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private search$ = new Subject<void>();
   private searchSub?: Subscription;
 
-  constructor(private applicationService: ApplicationService, public authService: AuthService) {}
+  /** Page title and fixed status filter come from the route (Applications / Review Queue) */
+  readonly title: string;
+  readonly presetStatus: string | null;
+
+  constructor(
+    private applicationService: ApplicationService,
+    public authService: AuthService,
+    private badges: NavBadgeService,
+    route: ActivatedRoute
+  ) {
+    const data = route.snapshot.data;
+    this.title = data['title'] || 'Applications';
+    this.presetStatus = data['presetStatus'] || null;
+    if (this.presetStatus) this.status = this.presetStatus;
+    const q = route.snapshot.queryParamMap;
+    if (q.get('search')) this.search = q.get('search')!;
+    if (!this.presetStatus && q.get('status')) this.status = q.get('status')!;
+  }
 
   ngOnInit(): void {
     this.searchSub = this.search$.pipe(debounceTime(350)).subscribe(() => {
@@ -58,8 +75,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   refresh(): void {
     this.applicationService.getAdminStats().subscribe({
-      next: (stats) => this.stats.set(stats),
-      error: (err) => this.error.set(apiError(err, 'Could not load statistics.'))
+      next: (stats) => this.badges.set('reviewQueue', stats.byStatus.find((s) => s._id === 'Submitted')?.count || 0)
     });
     this.loadApplications();
   }
@@ -90,10 +106,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.loadApplications();
   }
 
-  showStatus(status: string): void {
-    this.status = status;
-    this.onFilterChange();
-  }
 
   goTo(page: number): void {
     if (page < 1 || page > this.pages()) return;
@@ -101,9 +113,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.loadApplications();
   }
 
-  countOf(status: ApplicationStatus): number {
-    return this.stats()?.byStatus.find((s) => s._id === status)?.count || 0;
-  }
 
   trackById(_: number, item: ApplicationListItem): string {
     return item._id;

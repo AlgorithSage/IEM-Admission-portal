@@ -1,7 +1,10 @@
-<div class="page">
-  <div class="container narrow">
+<div class="shell-page">
+  <div class="narrow">
+    <div class="page-head">
+      <h1>Payment</h1>
+      <p>Pay the application fee to submit your application.</p>
+    </div>
     <div class="card box">
-      <h2>Application Fee</h2>
 
       <p *ngIf="stage() === 'loading'"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
 
@@ -56,14 +59,27 @@
       <ng-container *ngIf="stage() === 'done' && application() as application">
         <div class="alert alert-success">
           <i class="fa-solid fa-circle-check"></i>
-          <span>{{ info() || 'Your application fee has been paid.' }}</span>
+          <span>Payment successful. Your application has been submitted.</span>
+        </div>
+        <ng-container *ngIf="emails() as mail">
+          <div *ngIf="mail.applicationId && mail.admissionSlip" class="alert alert-info">
+            <i class="fa-solid fa-envelope"></i>
+            <span>Your Application ID and admission slip have been emailed to <strong>{{ application.email }}</strong>. Check your spam folder if you cannot find them.</span>
+          </div>
+          <div *ngIf="!(mail.applicationId && mail.admissionSlip)" class="alert alert-warning">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>We could not email your {{ !mail.admissionSlip ? 'admission slip' : 'Application ID' }} right now. Please download the admission slip below.</span>
+          </div>
+        </ng-container>
+        <div class="alert alert-warning">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Keep your Application ID <strong>{{ application.applicationId }}</strong> safe. You will need it for document verification, counselling and any query to the admission office.</span>
         </div>
         <table class="plain-table">
           <tr><th>Application ID</th><td><strong>{{ application.applicationId }}</strong></td></tr>
           <tr><th>Amount Paid</th><td>Rs. {{ application.payment?.amount | number }}</td></tr>
           <tr><th>Payment ID</th><td>{{ application.payment?.paymentId }}</td></tr>
           <tr><th>Paid On</th><td>{{ application.payment?.paidAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
-          <tr><th>Emailed To</th><td>{{ application.email }}</td></tr>
         </table>
         <div class="actions">
           <button class="btn btn-outline" (click)="downloadSlip()" [disabled]="downloading()">

@@ -1,47 +1,17 @@
-<div class="page">
-  <div class="container">
-    <div class="head">
-      <div>
-        <h2>Admission Scrutiny</h2>
-        <p class="muted">Signed in as {{ authService.currentUser()?.name }}</p>
-      </div>
-      <div class="actions">
-        <button class="btn btn-outline btn-sm" (click)="refresh()">Refresh</button>
-        <button class="btn btn-dark btn-sm" (click)="authService.logout()">Sign Out</button>
-      </div>
+<div class="shell-page">
+  <div>
+    <div class="page-head">
+      <h1>{{ title }}</h1>
+      <p>{{ presetStatus ? 'New applications waiting for document scrutiny.' : 'Search, filter and open any application.' }}</p>
     </div>
 
     <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
 
-    <!-- Statistics -->
-    <div class="card box" *ngIf="stats() as stats">
-      <table class="plain-table stats">
-        <thead>
-          <tr>
-            <th>Total</th>
-            <th *ngFor="let s of statuses">{{ s }}</th>
-            <th>Fees Collected</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><button class="link-btn" (click)="showStatus('All')">{{ stats.total }}</button></td>
-            <td *ngFor="let s of statuses"><button class="link-btn" (click)="showStatus(s)">{{ countOf(s) }}</button></td>
-            <td>Rs. {{ stats.feesCollected | number }} ({{ stats.paidCount }})</td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="muted dept-line">
-        By department:
-        <ng-container *ngFor="let d of stats.byDepartment; let last = last">{{ d._id }} {{ d.count }}<span *ngIf="!last"> &middot; </span></ng-container>
-      </p>
-    </div>
-
     <!-- Filters -->
-    <div class="card box">
+    <div class="card box list-card">
       <div class="filters">
         <input class="form-control" type="search" placeholder="Search name, email, phone, application ID" [(ngModel)]="search" (input)="onSearchInput()" aria-label="Search applications">
-        <select class="form-control" [(ngModel)]="status" (change)="onFilterChange()" aria-label="Filter by status">
+        <select *ngIf="!presetStatus" class="form-control" [(ngModel)]="status" (change)="onFilterChange()" aria-label="Filter by status">
           <option value="All">All statuses</option>
           <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
         </select>

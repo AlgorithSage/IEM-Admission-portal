@@ -186,7 +186,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  background: #1e3a8a;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -200,7 +200,7 @@
 }
 
 .user-avatar.avatar-admin {
-  background: linear-gradient(135deg, #991b1b 0%, #450a0a 100%);
+  background: #991b1b;
 }
 
 .user-meta {
@@ -299,3 +299,21 @@
   }
 }
 
+
+/* Signed-in area: the bar spans the full width so it lines up with the sidebar */
+.app-mode .nav-container {
+  max-width: none;
+  padding: 0 24px;
+}
+
+@media (max-width: 600px) {
+  .app-mode .nav-container {
+    padding: 0 16px;
+  }
+  .brand-divider,
+  .brand-text,
+  .user-meta,
+  .profile-divider {
+    display: none;
+  }
+}

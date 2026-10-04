@@ -1,0 +1,27 @@
+<div class="shell">
+  <button type="button" class="menu-toggle" (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()" aria-controls="shell-nav">
+    <i class="fa-solid" [ngClass]="menuOpen() ? 'fa-xmark' : 'fa-bars'"></i>
+    <span>Menu</span>
+  </button>
+
+  <aside id="shell-nav" class="sidebar" [class.open]="menuOpen()" [attr.aria-label]="label">
+    <nav>
+      <a *ngFor="let item of nav" [routerLink]="item.link" [queryParams]="item.query || null"
+        routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!item.exact }" class="side-link">
+        <i [class]="item.icon" aria-hidden="true"></i>
+        <span class="side-label">{{ item.label }}</span>
+        <span *ngIf="item.badge && badges()[item.badge]" class="side-badge">{{ badges()[item.badge] }}</span>
+      </a>
+    </nav>
+    <button type="button" class="side-link sign-out" (click)="signOut()">
+      <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+      <span>Sign out</span>
+    </button>
+  </aside>
+
+  <div *ngIf="menuOpen()" class="backdrop" (click)="menuOpen.set(false)"></div>
+
+  <main class="shell-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

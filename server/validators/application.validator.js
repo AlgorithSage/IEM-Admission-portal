@@ -87,6 +87,8 @@ const validateApplication = (body) => {
   const alternatePhone = normalizePhone(body.alternatePhone);
   if (alternatePhone && !PHONE_RE.test(alternatePhone)) {
     errors.push('Alternate mobile number must be 10 digits starting with 6-9.');
+  } else if (alternatePhone && alternatePhone === phone) {
+    errors.push('Alternate mobile number must be different from the mobile number.');
   }
 
   const dob = str(body.dob);
@@ -208,9 +210,10 @@ const validateApplication = (body) => {
         return;
       }
       seen.add(exam);
+      // Stored as rollNumber for compatibility; it holds the exam's application number
       const rollNumber = str(e.rollNumber);
-      if (!/^[A-Za-z0-9-]{4,20}$/.test(rollNumber)) {
-        errors.push(`${rules.label} roll / registration number must be 4-20 letters or digits.`);
+      if (!new RegExp(rules.applicationNo.pattern).test(rollNumber)) {
+        errors.push(`${rules.label} application number: ${rules.applicationNo.hint}`);
       }
       competitiveExams.push({
         exam,

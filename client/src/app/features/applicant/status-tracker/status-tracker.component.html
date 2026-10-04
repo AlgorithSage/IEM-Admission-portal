@@ -1,11 +1,9 @@
-<div class="page">
-  <div class="container narrow">
-    <div class="head">
-      <div>
-        <h2>My Application</h2>
-        <p *ngIf="application()?.applicationId">Application ID: <strong>{{ application()?.applicationId }}</strong></p>
-      </div>
-      <a routerLink="/applicant/dashboard" class="btn btn-outline btn-sm">Dashboard</a>
+<div class="shell-page">
+  <div class="narrow">
+    <div class="page-head">
+      <h1>My Application</h1>
+      <p *ngIf="application()?.applicationId">Application ID: <strong>{{ application()?.applicationId }}</strong></p>
+      <p *ngIf="!application()?.applicationId">Your documents, payment and application status.</p>
     </div>
 
     <p *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>

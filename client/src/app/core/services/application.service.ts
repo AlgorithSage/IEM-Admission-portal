@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import {
+  AdminOverview,
   AdminStats,
+  AuditEntry,
   Application,
   ApplicationDetail,
   ApplicationListItem,
@@ -16,6 +18,27 @@ interface AppResponse {
   success: boolean;
   message?: string;
   application: Application;
+}
+
+/** Which confirmation emails reached the mail server after payment */
+export interface PaymentEmails {
+  applicationId: boolean;
+  admissionSlip: boolean;
+}
+
+/** A document attached to a saved draft (already uploaded, not yet submitted) */
+export interface DraftDocument {
+  uploadId: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
+export interface ApplicationDraft {
+  data: Record<string, any>;
+  documents: Record<string, DraftDocument>;
+  step: string;
+  updatedAt: string;
 }
 
 export interface ListFilter {
@@ -44,6 +67,14 @@ export class ApplicationService {
     return this.http.get<{ success: boolean; application: Application | null }>(`${this.api}/applications/my-application`);
   }
 
+  getDraft(): Observable<ApplicationDraft | null> {
+    return this.http.get<{ draft: ApplicationDraft | null }>(`${this.api}/applications/my-draft`).pipe(map((r) => r.draft));
+  }
+
+  saveDraft(draft: { data: object; documents: Record<string, DraftDocument>; step: string }): Observable<ApplicationDraft> {
+    return this.http.put<{ draft: ApplicationDraft }>(`${this.api}/applications/my-draft`, draft).pipe(map((r) => r.draft));
+  }
+
   replaceDocument(docKey: string, uploadId: string): Observable<AppResponse> {
     return this.http.put<AppResponse>(`${this.api}/applications/my-application/documents/${encodeURIComponent(docKey)}`, { uploadId });
   }
@@ -62,8 +93,8 @@ export class ApplicationService {
     return this.http.post<CheckoutResult>(`${this.api}/payments/mock-checkout`, { orderId, method, outcome });
   }
 
-  verifyPayment(result: CheckoutResult, method: string): Observable<AppResponse> {
-    return this.http.post<AppResponse>(`${this.api}/payments/verify`, { ...result, method });
+  verifyPayment(result: CheckoutResult, method: string): Observable<AppResponse & { emails: PaymentEmails | null }> {
+    return this.http.post<AppResponse & { emails: PaymentEmails | null }>(`${this.api}/payments/verify`, { ...result, method });
   }
 
   // ---------- Files (owner or admin; streamed with auth, never public URLs) ----------
@@ -80,6 +111,17 @@ export class ApplicationService {
 
   getAdminStats(): Observable<AdminStats> {
     return this.http.get<{ success: boolean; stats: AdminStats }>(`${this.api}/admin/stats`).pipe(map((r) => r.stats));
+  }
+
+  getAdminOverview(year?: number): Observable<AdminOverview> {
+    const params = year ? new HttpParams().set('year', String(year)) : undefined;
+    return this.http.get<{ overview: AdminOverview }>(`${this.api}/admin/overview`, { params }).pipe(map((r) => r.overview));
+  }
+
+  getAuditLog(page = 1, action = ''): Observable<{ items: AuditEntry[]; total: number; page: number; pages: number; actions: string[] }> {
+    let params = new HttpParams().set('page', String(page));
+    if (action) params = params.set('action', action);
+    return this.http.get<{ items: AuditEntry[]; total: number; page: number; pages: number; actions: string[] }>(`${this.api}/admin/audit`, { params });
   }
 
   getApplications(filter: ListFilter): Observable<{ applications: ApplicationListItem[]; total: number; page: number; pages: number }> {

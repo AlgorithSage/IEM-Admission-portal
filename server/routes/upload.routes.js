@@ -15,6 +15,7 @@ router.get('/config', verifyToken, controller.getConfig);
 router.post('/', ...applicantOnly, upload.single('file'), controller.uploadLocal);
 router.post('/blob-token', blobAuth, controller.blobToken);
 router.post('/blob-confirm', ...applicantOnly, controller.confirmBlob);
+router.get('/:id/content', ...applicantOnly, controller.uploadContent);
 router.delete('/:id', ...applicantOnly, controller.discardUpload);
 
 module.exports = router;
