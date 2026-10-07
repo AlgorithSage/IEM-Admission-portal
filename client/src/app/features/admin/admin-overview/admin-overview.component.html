@@ -20,7 +20,11 @@
       <span class="tile-note">{{ t.note }}</span>
     </a>
     <ng-container *ngIf="!stats()">
-      <div *ngFor="let i of [1, 2, 3, 4, 5]" class="card tile tile-loading" aria-hidden="true"></div>
+      <div *ngFor="let i of [1, 2, 3, 4, 5]" class="card tile" aria-hidden="true">
+        <app-skeleton width="60%" height="12px" />
+        <app-skeleton width="40%" height="28px" />
+        <app-skeleton width="70%" height="12px" />
+      </div>
     </ng-container>
   </div>
 
@@ -37,6 +41,10 @@
         </select>
       </div>
 
+      <div *ngIf="!overview() && !error()" class="chart-skeleton" aria-busy="true">
+        <span class="sr-only" role="status">Loading chart</span>
+        <app-skeleton height="220px" />
+      </div>
       <div *ngIf="overview() as o" class="chart" (mouseleave)="hovered.set(null)">
         <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" [attr.aria-label]="'Applications started per month in ' + year">
           <!-- Grid and y-axis labels -->
@@ -88,10 +96,13 @@
         </div>
       </div>
       <p *ngIf="stats() && !statusBars().length" class="muted">No applications yet.</p>
+      <div *ngIf="!stats() && !error()" class="sk-stack" aria-hidden="true">
+        <div *ngFor="let i of [1, 2, 3, 4, 5]" class="sk-row"><app-skeleton width="110px" /><app-skeleton height="10px" /></div>
+      </div>
       <ul class="bars">
         <li *ngFor="let b of statusBars()">
           <a [routerLink]="b.status === 'Submitted' ? '/admin/review-queue' : '/admin/applications'" [queryParams]="b.status === 'Submitted' ? null : { status: b.status }" class="bar-row">
-            <span class="bar-label">{{ b.status }}</span>
+            <span class="bar-label">{{ b.status | statusLabel }}</span>
             <span class="bar-track"><span *ngIf="b.count" class="bar-fill" [style.width.%]="(b.count / maxBar()) * 100"></span></span>
             <span class="bar-value">{{ b.count }} <span class="muted">({{ b.pct }}%)</span></span>
           </a>
@@ -107,6 +118,9 @@
       <a routerLink="/admin/applications" class="link-btn view-all">View all</a>
     </div>
     <p *ngIf="overview() && !overview()!.recent.length" class="muted">No applications yet.</p>
+    <div *ngIf="!overview() && !error()" class="sk-stack" aria-hidden="true">
+      <app-skeleton *ngFor="let i of [1, 2, 3, 4, 5]" height="34px" />
+    </div>
     <div *ngIf="overview()?.recent?.length" class="table-wrap">
       <table class="plain-table recent">
         <thead>
@@ -117,7 +131,7 @@
             <td class="nowrap">{{ a.applicationId || '-' }}</td>
             <td>{{ a.fullName }}</td>
             <td>{{ a.program || a.department }}<br><small class="muted">{{ a.streamPreferences?.[0] }}</small></td>
-            <td><span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status }}</span></td>
+            <td><span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status | statusLabel }}</span></td>
             <td class="nowrap">{{ (a.submittedAt || a.createdAt) | date:'dd MMM yyyy' }}</td>
             <td class="right"><a [routerLink]="['/admin/applications', a._id]" class="link-btn">Open</a></td>
           </tr>

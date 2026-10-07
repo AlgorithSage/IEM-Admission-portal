@@ -8,7 +8,7 @@ const storage = require('../services/storage.service');
 const { claimUploads, releaseUploads, refFromUpload } = require('../services/uploads.service');
 const { findApplicationForUser, isOwner, transitionStatus, httpError } = require('../services/workflow.service');
 const { generateAdmissionSlip } = require('../services/slip.service');
-const { serializeApplication } = require('../services/presenter');
+const { serializeApplication, withAvailability } = require('../services/presenter');
 
 // @desc    Create an application from form data and previously uploaded files
 //          (body.documents maps document slots to upload IDs). Stays 'Payment Pending' until the fee is paid.
@@ -98,7 +98,7 @@ const submitApplication = async (req, res, next) => {
 const getMyApplication = async (req, res, next) => {
   try {
     const app = await findApplicationForUser(req.user);
-    res.status(200).json({ success: true, application: app ? serializeApplication(app) : null });
+    res.status(200).json({ success: true, application: app ? await withAvailability(serializeApplication(app), app) : null });
   } catch (error) {
     next(error);
   }
@@ -161,21 +161,32 @@ const replaceDocument = async (req, res, next) => {
     if (!uploadId) throw httpError(400, 'Upload the replacement file first.');
     const app = await findApplicationForUser(req.user);
     if (!app) throw httpError(404, 'No application found.');
-    if (app.status !== 'Correction Requested') throw httpError(400, 'Documents can only be replaced when a correction is requested.');
     const slot = findSlot(app, req.params.docKey);
     if (!slot) throw httpError(404, 'Document not found on this application.');
-    if (slot.get().verification?.status !== 'Rejected') throw httpError(400, 'Only rejected documents can be replaced.');
+    // Allowed when the admin rejected it during a correction, or when the stored file has gone missing
+    const isCorrection = app.status === 'Correction Requested' && slot.get().verification?.status === 'Rejected';
+    const isMissing = !isCorrection && !(await storage.exists(slot.get()));
+    if (!isCorrection && !isMissing) {
+      throw httpError(400, 'This document can be replaced only when the admission office asks for it.');
+    }
 
     claimed = await claimUploads(req.user.id, { file: uploadId });
     const current = slot.get();
     const oldRef = { storage: current.storage, fileName: current.fileName, filePath: current.filePath };
+    // The new file has not been checked by anyone: it goes back to 'Pending' scrutiny
     slot.set(refFromUpload(claimed.file));
     await app.save();
     claimed = null;
     await storage.remove(oldRef);
 
-    await audit({ application: app._id, actorId: req.user.id, actorRole: 'applicant', action: 'DOCUMENT_REPLACED', details: slot.label });
-    res.status(200).json({ success: true, message: `${slot.label} replaced.`, application: serializeApplication(app) });
+    await audit({
+      application: app._id,
+      actorId: req.user.id,
+      actorRole: 'applicant',
+      action: isMissing ? 'DOCUMENT_REUPLOADED' : 'DOCUMENT_REPLACED',
+      details: isMissing ? `${slot.label} (stored file was missing)` : slot.label
+    });
+    res.status(200).json({ success: true, message: `${slot.label} uploaded.`, application: await withAvailability(serializeApplication(app), app) });
   } catch (error) {
     if (claimed) await releaseUploads(claimed);
     next(error);
@@ -192,7 +203,7 @@ const resubmitApplication = async (req, res, next) => {
     const pending = documentSlots(app).filter((d) => d.get().verification?.status === 'Rejected');
     if (pending.length) throw httpError(400, `Replace these documents first: ${pending.map((d) => d.label).join(', ')}.`);
     await transitionStatus(app, 'Review', { id: req.user.id, role: 'system' }, 'Corrected documents resubmitted by applicant');
-    res.status(200).json({ success: true, message: 'Application resubmitted for review.', application: serializeApplication(app) });
+    res.status(200).json({ success: true, message: 'Application resubmitted for review.', application: await withAvailability(serializeApplication(app), app) });
   } catch (error) {
     next(error);
   }

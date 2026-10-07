@@ -1,6 +1,9 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { RouterModule } from '@angular/router';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
+import { applicationOutcome } from '../../../core/utils/outcome.util';
 import { ApplicationService } from '../../../core/services/application.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Application, ApplicationDocument } from '../../../models/application.model';
@@ -12,7 +15,7 @@ import { apiError, downloadBlob, errorMessage, openBlobInNewTab } from '../../..
 @Component({
   selector: 'app-status-tracker',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, RouterModule],
   templateUrl: './status-tracker.component.html',
   styleUrls: ['./status-tracker.component.css']
 })
@@ -24,6 +27,7 @@ export class StatusTrackerComponent implements OnInit {
   readonly message = signal('');
   readonly busyKey = signal('');
   readonly resubmitting = signal(false);
+  readonly outcome = computed(() => applicationOutcome(this.application()));
 
   constructor(
     private applicationService: ApplicationService,
@@ -64,6 +68,11 @@ export class StatusTrackerComponent implements OnInit {
 
   get canCorrect(): boolean {
     return this.application()?.status === 'Correction Requested';
+  }
+
+  /** Rejected during a correction, or the stored file was lost (the server enforces the same rule) */
+  canReplace(doc: ApplicationDocument): boolean {
+    return doc.available === false || (this.canCorrect && doc.verification.status === 'Rejected');
   }
 
   viewDocument(doc: ApplicationDocument): void {

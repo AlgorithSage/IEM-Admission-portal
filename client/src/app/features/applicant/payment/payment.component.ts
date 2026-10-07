@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { switchMap } from 'rxjs';
@@ -13,7 +14,7 @@ type Stage = 'loading' | 'summary' | 'checkout' | 'processing' | 'done';
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, SkeletonComponent, FormsModule, RouterModule],
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.css']
 })

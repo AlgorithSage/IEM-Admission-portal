@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { BvaValidatorService, ValidationFeedback } from '../../../core/services/bva-validator.service';
 
@@ -14,7 +14,10 @@ import { BvaValidatorService, ValidationFeedback } from '../../../core/services/
 })
 export class AdminLoginComponent {
   loginForm: FormGroup;
-  readonly errorMessage = signal<string>('');
+  // Sent here because the 1-day session ended
+  readonly errorMessage = signal<string>(
+    inject(ActivatedRoute).snapshot.queryParamMap.has('expired') ? 'Your session has expired. Please log in again.' : ''
+  );
   readonly loading = signal<boolean>(false);
   showPassword = false;
 

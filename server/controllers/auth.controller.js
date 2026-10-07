@@ -5,6 +5,9 @@ const User = require('../models/User');
 const { JWT_SECRET } = require('../config/secrets');
 
 // Helper to sign JWT token
+// Sessions last one day; after that the user must log in again (policy, not configuration)
+const SESSION_TTL = '1d';
+
 const generateToken = (user) => {
   return jwt.sign(
     {
@@ -14,7 +17,7 @@ const generateToken = (user) => {
       role: user.role
     },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: SESSION_TTL }
   );
 };
 

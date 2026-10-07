@@ -1,5 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,10 +14,20 @@ import { apiError, downloadBlob, errorMessage, openBlobInNewTab } from '../../..
 const REMARKS_REQUIRED: ApplicationStatus[] = ['Rejected', 'On Hold', 'Correction Requested'];
 const VERIFIABLE: ApplicationStatus[] = ['Submitted', 'Review', 'On Hold'];
 
+// How each decision is worded and coloured for the admin
+const DECISIONS: Record<string, { label: string; tone: 'approve' | 'reject' | 'neutral'; icon: string }> = {
+  Review: { label: 'Start review', tone: 'neutral', icon: 'fa-magnifying-glass' },
+  Selected: { label: 'Approve application', tone: 'approve', icon: 'fa-circle-check' },
+  Rejected: { label: 'Reject application', tone: 'reject', icon: 'fa-circle-xmark' },
+  'On Hold': { label: 'Put on hold', tone: 'neutral', icon: 'fa-pause' },
+  'Correction Requested': { label: 'Ask for corrections', tone: 'neutral', icon: 'fa-rotate-left' }
+};
+const REUPLOAD_REASON = 'The file was not received. Please upload it again.';
+
 @Component({
   selector: 'app-application-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, FormsModule, RouterModule],
   templateUrl: './application-detail.component.html',
   styleUrls: ['./application-detail.component.css']
 })
@@ -79,6 +91,35 @@ export class ApplicationDetailComponent implements OnInit {
 
   get pendingOrRejectedDocs(): number {
     return (this.app?.documents || []).filter((d) => d.verification.status !== 'Verified').length;
+  }
+
+  get missingDocs(): number {
+    return (this.app?.documents || []).filter((d) => d.available === false).length;
+  }
+
+  docCount(status: string): number {
+    return (this.app?.documents || []).filter((d) => d.available !== false && d.verification.status === status).length;
+  }
+
+  decisionLabel(status: string): string {
+    return DECISIONS[status]?.label || status;
+  }
+
+  decisionTone(status: string): string {
+    return DECISIONS[status]?.tone || 'neutral';
+  }
+
+  decisionIcon(status: string): string {
+    return DECISIONS[status]?.icon || 'fa-arrow-right';
+  }
+
+  choose(status: ApplicationStatus): void {
+    this.targetStatus = this.targetStatus === status ? '' : status;
+  }
+
+  /** Missing file: reject it with a standard reason so the applicant is told to upload it again */
+  askReupload(doc: ApplicationDocument): void {
+    this.updateDocument(doc, 'Rejected', REUPLOAD_REASON);
   }
 
   get remarksRequired(): boolean {
@@ -167,7 +208,7 @@ export class ApplicationDetailComponent implements OnInit {
   applyStatus(): void {
     if (!this.app || !this.targetStatus) return;
     if (this.remarksRequired && !this.remarks.trim()) {
-      this.error.set(`Remarks are required for '${this.targetStatus}'.`);
+      this.error.set(`Write a message to the applicant to ${this.decisionLabel(this.targetStatus).toLowerCase()}.`);
       return;
     }
     this.busy.set('status');

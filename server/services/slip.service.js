@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit');
 const { COMPETITIVE_EXAMS } = require('../config/admission.rules');
+const { statusLabel } = require('../config/status.rules');
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-');
 const inr = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN')}`;
@@ -38,7 +39,7 @@ const generateAdmissionSlip = (app) =>
     row('Submitted On', fmtDate(app.submittedAt));
     row('Program', app.program || app.department);
     row('Stream Preferences', (app.streamPreferences || []).map((s, i) => `${i + 1}. ${s}`).join('   ') || '-');
-    row('Status', app.status);
+    row('Status', statusLabel(app.status));
 
     heading('Applicant');
     row('Name', app.fullName);

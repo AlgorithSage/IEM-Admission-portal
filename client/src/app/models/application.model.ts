@@ -41,6 +41,8 @@ export interface ApplicationDocument {
   fileSize: number;
   uploadedAt: string;
   verification: { status: VerificationStatus; remarks: string; verifiedAt?: string };
+  /** Single-application responses only: false when the stored file no longer exists */
+  available?: boolean;
 }
 
 export interface ParentDetails {

@@ -3,7 +3,7 @@ const Payment = require('../models/Payment');
 const { audit } = require('../models/AuditLog');
 const { nextSequence } = require('../models/Counter');
 const { ADMISSION_YEAR } = require('../config/admission.rules');
-const { ADMIN_TRANSITIONS, SYSTEM_TRANSITIONS, REMARKS_REQUIRED } = require('../config/status.rules');
+const { ADMIN_TRANSITIONS, SYSTEM_TRANSITIONS, REMARKS_REQUIRED, DEFAULT_REMARKS, statusLabel } = require('../config/status.rules');
 const { documentSlots } = require('./documents.service');
 const { sendEmail, EMAIL_ENABLED } = require('./notification.service');
 const { generateAdmissionSlip } = require('./slip.service');
@@ -39,7 +39,7 @@ const STATUS_MESSAGES = {
   Review: 'Your application is now under review by the admission committee.',
   'On Hold': 'Your application has been put on hold.',
   'Correction Requested': 'Some of your documents need correction. Please log in, replace the rejected documents and resubmit.',
-  Selected: 'Congratulations! You have been provisionally selected. Please report for document verification and admission formalities.',
+  Selected: 'Congratulations! Your application has been approved. Please report for document verification and admission formalities.',
   Rejected: 'We regret to inform you that your application has not been accepted.'
 };
 
@@ -48,9 +48,9 @@ const notifyStatusChange = (app, remarks) =>
     application: app,
     type: 'STATUS_UPDATE',
     to: app.email,
-    subject: `Application ${app.applicationId || ''} status: ${app.status}`,
+    subject: `Application ${app.applicationId || ''}: ${statusLabel(app.status)}`,
     text:
-      `Dear ${app.fullName},\n\n${STATUS_MESSAGES[app.status] || `Your application status is now ${app.status}.`}\n` +
+      `Dear ${app.fullName},\n\n${STATUS_MESSAGES[app.status] || `Your application status is now ${statusLabel(app.status)}.`}\n` +
       (remarks ? `\nRemarks: ${remarks}\n` : '') +
       `\nApplication ID: ${app.applicationId || '-'}\n\nIEM Admissions`
   });
@@ -80,7 +80,7 @@ const transitionStatus = async (app, toStatus, actor, remarks = '') => {
 
   app.status = toStatus;
   app.statusHistory.push({ fromStatus: from, toStatus, changedAt: new Date(), changedBy: actor.id, remarks: cleanRemarks });
-  if (cleanRemarks) app.adminRemarks = cleanRemarks;
+  app.adminRemarks = cleanRemarks || DEFAULT_REMARKS[toStatus] || '';
   await app.save();
 
   await audit({
@@ -156,7 +156,7 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
         status: 'Submitted',
         applicationId,
         submittedAt: now,
-        adminRemarks: 'Application submitted. Awaiting scrutiny.',
+        adminRemarks: DEFAULT_REMARKS.Submitted,
         payment: { status: 'Paid', amount: paid.amount / 100, currency: paid.currency, orderId: paid.orderId, paymentId, method, paidAt: now }
       },
       $push: { statusHistory: { fromStatus: 'Payment Pending', toStatus: 'Submitted', changedAt: now, changedBy: 'system', remarks: `Fee paid (${paymentId})` } },

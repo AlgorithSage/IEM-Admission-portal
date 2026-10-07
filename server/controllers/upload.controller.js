@@ -19,6 +19,7 @@ const uploadLocal = async (req, res, next) => {
   try {
     if (storage.DRIVER !== 'local') {
       if (req.file) fs.unlink(req.file.path, () => {});
+      if (storage.DRIVER === 'unavailable') throw httpError(503, 'Document upload is not available right now. Please try again later.');
       throw httpError(400, 'Direct uploads are not enabled. Upload to blob storage instead.');
     }
     if (!req.file) throw httpError(400, 'Attach a file.');

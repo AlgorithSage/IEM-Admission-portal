@@ -1,5 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -9,7 +11,7 @@ import { apiError } from '../../../core/utils/file.util';
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, SkeletonComponent, StatusLabelPipe, FormsModule, RouterModule],
   templateUrl: './audit-log.component.html',
   styleUrls: ['./audit-log.component.css']
 })
@@ -58,9 +60,4 @@ export class AuditLogComponent implements OnInit {
     this.load();
   }
 
-  /** DOCUMENT_VERIFIED -> Document verified */
-  label(action: string): string {
-    const text = action.toLowerCase().replace(/_/g, ' ');
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
 }

@@ -43,6 +43,10 @@
 
       <!-- Authenticated Profile Widget -->
       <ng-container *ngIf="authService.isAuthenticated()">
+        <a *ngIf="showDashboardLink()" [routerLink]="authService.dashboardUrl()" class="btn btn-primary btn-login">
+          <i class="fa-solid fa-gauge"></i>
+          <span>Dashboard</span>
+        </a>
         <div class="user-profile-widget">
           <!-- User Avatar Circle with initials -->
           <div class="user-avatar" [class.avatar-admin]="authService.isAdmin()" [title]="authService.currentUser()?.name || 'User'">

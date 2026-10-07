@@ -1,6 +1,8 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Output, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -13,7 +15,15 @@ import { AuthService } from '../../../core/services/auth.service';
 export class NavbarComponent {
   @Output() openPathway = new EventEmitter<void>();
 
-  constructor(public authService: AuthService) {}
+  private readonly url;
+
+  /** On public pages (landing) a signed-in user gets a way back into the portal; inside it the sidebar has this */
+  readonly showDashboardLink;
+
+  constructor(public authService: AuthService, router: Router) {
+    this.url = toSignal(router.events.pipe(filter((e) => e instanceof NavigationEnd), map(() => router.url)), { initialValue: router.url });
+    this.showDashboardLink = computed(() => this.authService.isAuthenticated() && !/^\/(applicant|admin)\//.test(this.url()));
+  }
 
   getUserInitials(): string {
     const name = this.authService.currentUser()?.name || '';

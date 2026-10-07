@@ -3,10 +3,11 @@ const Payment = require('../models/Payment');
 const Notification = require('../models/Notification');
 const { AuditLog, audit } = require('../models/AuditLog');
 const { DEPARTMENTS } = require('../config/admission.rules');
-const { STATUSES, VERIFIABLE_STATUSES } = require('../config/status.rules');
+const { STATUSES, VERIFIABLE_STATUSES, statusLabel } = require('../config/status.rules');
 const { findSlot } = require('../services/documents.service');
 const { transitionStatus, httpError, deleteApplication } = require('../services/workflow.service');
-const { serializeApplication } = require('../services/presenter');
+const { serializeApplication, withAvailability } = require('../services/presenter');
+const storage = require('../services/storage.service');
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -51,7 +52,7 @@ const getApplicationDetail = async (req, res, next) => {
       Notification.find({ application: app._id }).select('-body').sort({ createdAt: -1 }).limit(50).lean(),
       AuditLog.find({ application: app._id }).sort({ createdAt: -1 }).limit(200).lean()
     ]);
-    res.status(200).json({ success: true, application: serializeApplication(app, { forAdmin: true }), payments, notifications, auditLog });
+    res.status(200).json({ success: true, application: await withAvailability(serializeApplication(app, { forAdmin: true }), app), payments, notifications, auditLog });
   } catch (error) {
     next(error);
   }
@@ -72,12 +73,15 @@ const verifyDocument = async (req, res, next) => {
       throw httpError(409, 'This application was changed by someone else. Reload and try again.');
     }
     if (!VERIFIABLE_STATUSES.includes(app.status)) {
-      throw httpError(400, `Documents cannot be verified while the application is '${app.status}'.`);
+      throw httpError(400, `Documents cannot be approved or rejected while the application is '${statusLabel(app.status)}'.`);
     }
     const slot = findSlot(app, req.params.docKey);
     if (!slot) throw httpError(404, 'Document not found on this application.');
 
     const ref = slot.get();
+    if (status === 'Verified' && !(await storage.exists(ref))) {
+      throw httpError(400, `The ${slot.label} file is missing. Reject it so the applicant uploads it again.`);
+    }
     ref.verification = { status, remarks: cleanRemarks, verifiedBy: req.user.id, verifiedAt: new Date() };
     await app.save();
     await audit({ application: app._id, actorId: req.user.id, actorRole: 'admin', action: `DOCUMENT_${status.toUpperCase()}`, details: `${slot.label}${cleanRemarks ? `: ${cleanRemarks}` : ''}` });
@@ -86,7 +90,7 @@ const verifyDocument = async (req, res, next) => {
     if (app.status === 'Submitted') {
       await transitionStatus(app, 'Review', { id: req.user.id, role: 'admin' }, 'Document scrutiny started');
     }
-    res.status(200).json({ success: true, message: `${slot.label} marked ${status}.`, application: serializeApplication(app, { forAdmin: true }) });
+    res.status(200).json({ success: true, message: `${slot.label} ${status === 'Verified' ? 'approved' : 'rejected'}.`, application: serializeApplication(app, { forAdmin: true }) });
   } catch (error) {
     next(error);
   }
@@ -103,7 +107,7 @@ const updateStatus = async (req, res, next) => {
       throw httpError(409, 'This application was changed by someone else. Reload and try again.');
     }
     await transitionStatus(app, status, { id: req.user.id, role: 'admin' }, String(remarks || '').slice(0, 500));
-    res.status(200).json({ success: true, message: `Status changed to '${status}'.`, application: serializeApplication(app, { forAdmin: true }) });
+    res.status(200).json({ success: true, message: `Status changed to '${statusLabel(status)}'.`, application: serializeApplication(app, { forAdmin: true }) });
   } catch (error) {
     next(error);
   }
@@ -222,7 +226,7 @@ const exportReport = async (req, res, next) => {
     const header = ['Application ID', 'Name', 'Email', 'Phone', 'Program', 'Stream Preferences', 'Category', 'Class X %', 'Class XII %', 'Graduation %', 'Status', 'Fee Status', 'Fee (Rs.)', 'Payment ID', 'Submitted On'];
     const rows = apps.map((a) => [
       a.applicationId, a.fullName, a.email, a.phone, a.program || a.department, (a.streamPreferences || []).join(' > '), a.category,
-      a.classX?.percentage, a.classXII?.percentage ?? a.percentage, a.graduation?.percentage, a.status,
+      a.classX?.percentage, a.classXII?.percentage ?? a.percentage, a.graduation?.percentage, statusLabel(a.status),
       a.payment?.status, a.payment?.amount, a.payment?.paymentId, a.submittedAt ? new Date(a.submittedAt).toISOString().slice(0, 10) : ''
     ]);
     const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');

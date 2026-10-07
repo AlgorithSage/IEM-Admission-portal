@@ -1,5 +1,7 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
@@ -13,7 +15,7 @@ import { apiError, downloadBlob, errorMessage } from '../../../core/utils/file.u
 @Component({
   selector: 'app-application-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, SkeletonComponent, StatusLabelPipe, FormsModule, RouterModule],
   templateUrl: './application-list.component.html',
   styleUrls: ['./application-list.component.css']
 })

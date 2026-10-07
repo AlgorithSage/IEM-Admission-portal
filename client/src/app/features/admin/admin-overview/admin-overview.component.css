@@ -75,9 +75,8 @@
   color: var(--text-muted);
 }
 
-.tile-loading {
-  min-height: 98px;
-  background-color: var(--surface-muted);
+.chart-skeleton {
+  padding-top: 8px;
 }
 
 /* Panels */

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LandingComponent } from './features/landing/landing.component';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { guestGuard } from './core/guards/guest.guard';
 import { ShellNavItem } from './shared/components/app-shell/app-shell.component';
 
 const loadShell = () => import('./shared/components/app-shell/app-shell.component').then((m) => m.AppShellComponent);
@@ -31,6 +32,7 @@ export const routes: Routes = [
   // Applicant
   {
     path: 'applicant/login',
+    canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/applicant-login/applicant-login.component').then((m) => m.ApplicantLoginComponent)
   },
   {
@@ -62,6 +64,7 @@ export const routes: Routes = [
   // Administrator
   {
     path: 'admin/login',
+    canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/admin-login/admin-login.component').then((m) => m.AdminLoginComponent)
   },
   {

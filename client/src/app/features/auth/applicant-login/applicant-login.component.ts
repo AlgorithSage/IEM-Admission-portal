@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { BvaValidatorService, ValidationFeedback, PasswordStrength } from '../../../core/services/bva-validator.service';
 
@@ -13,10 +13,14 @@ import { BvaValidatorService, ValidationFeedback, PasswordStrength } from '../..
   styleUrls: ['./applicant-login.component.css']
 })
 export class ApplicantLoginComponent {
-  isRegisterMode = false;
+  // Opened from "Create account" in the sign-in dialog
+  isRegisterMode = inject(ActivatedRoute).snapshot.queryParamMap.get('mode') === 'register';
   loginForm: FormGroup;
   registerForm: FormGroup;
-  readonly errorMessage = signal<string>('');
+  // Sent here because the 1-day session ended
+  readonly errorMessage = signal<string>(
+    inject(ActivatedRoute).snapshot.queryParamMap.has('expired') ? 'Your session has expired. Please log in again.' : ''
+  );
   readonly loading = signal<boolean>(false);
   // Password visibility toggles
   showLoginPassword = false;

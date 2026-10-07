@@ -152,3 +152,30 @@
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+button.pathway-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.pathway-card.static {
+  cursor: default;
+}
+
+.pathway-card.static:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #fde68a;
+}
+
+.pathway-card.static:hover .card-icon {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #0a0a0a;
+}
+
+.back-btn {
+  align-self: flex-start;
+  padding: 0;
+}

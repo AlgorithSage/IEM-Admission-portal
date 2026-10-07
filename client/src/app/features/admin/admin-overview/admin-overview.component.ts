@@ -1,5 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -26,7 +28,7 @@ interface Tile {
 @Component({
   selector: 'app-admin-overview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, SkeletonComponent, StatusLabelPipe, FormsModule, RouterModule],
   templateUrl: './admin-overview.component.html',
   styleUrls: ['./admin-overview.component.css']
 })

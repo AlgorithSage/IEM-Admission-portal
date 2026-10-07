@@ -10,7 +10,13 @@ const { uploadDir } = require('../middlewares/upload.middleware');
  *           request through the API carries file bytes (avoids the 4.5 MB serverless body limit).
  *   local — server disk (development). Not suitable for serverless: /tmp is per-instance and ephemeral.
  */
-const DRIVER = process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : 'local';
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+// On serverless hosts the local disk is per-instance and temporary: files written there are lost, so
+// uploads are refused ('unavailable') until a Blob store is connected instead of failing later.
+const DRIVER = process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : isServerless ? 'unavailable' : 'local';
+if (DRIVER === 'unavailable') {
+  console.error('[Storage] BLOB_READ_WRITE_TOKEN is not set on a serverless host: document uploads are disabled. Connect a Vercel Blob store.');
+}
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -35,6 +41,18 @@ const streamTo = async (ref, res) => {
   if (!p || !fs.existsSync(p)) return false;
   res.sendFile(p);
   return true;
+};
+
+/** Whether a stored document's file still exists (local disk check or a Blob HEAD request). */
+const exists = async (ref) => {
+  try {
+    if (ref.storage === 'blob') return !!(await headBlob(ref.filePath));
+    const p = localPath(ref.fileName);
+    return !!p && fs.existsSync(p);
+  } catch (err) {
+    console.error('[Storage] Existence check failed:', err.message);
+    return true; // unknown: do not tell the applicant to re-upload because of a transient error
+  }
 };
 
 /** Best-effort delete; storage clean-up must never fail the business operation. */
@@ -64,4 +82,4 @@ const headBlob = async (url) => {
 /** Pathname prefix each applicant may upload to; enforced when issuing client upload tokens. */
 const ownerPrefix = (userId) => `applicants/${String(userId).replace(/[^a-zA-Z0-9_-]/g, '')}/`;
 
-module.exports = { DRIVER, MAX_BYTES, ALLOWED_TYPES, streamTo, remove, headBlob, ownerPrefix };
+module.exports = { DRIVER, MAX_BYTES, ALLOWED_TYPES, streamTo, remove, headBlob, exists, ownerPrefix };

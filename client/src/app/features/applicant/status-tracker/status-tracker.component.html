@@ -6,7 +6,15 @@
       <p *ngIf="!application()?.applicationId">Your documents, payment and application status.</p>
     </div>
 
-    <p *ngIf="loading()"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+    <div *ngIf="loading() && !application()" class="sk-stack" aria-busy="true">
+      <span class="sr-only" role="status">Loading your application</span>
+      <div class="card box sk-row"><app-skeleton variant="circle" width="36px" /><app-skeleton variant="text" [lines]="2" /></div>
+      <div class="card box sk-stack"><app-skeleton *ngFor="let i of [1, 2, 3]" height="18px" /></div>
+      <div class="card box sk-stack">
+        <app-skeleton width="120px" height="20px" />
+        <div *ngFor="let i of [1, 2, 3, 4]" class="sk-row"><app-skeleton variant="text" [lines]="2" /><app-skeleton variant="pill" width="90px" height="24px" /></div>
+      </div>
+    </div>
 
     <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
     <div *ngIf="message()" class="alert alert-success" role="status"><i class="fa-solid fa-circle-check"></i><span>{{ message() }}</span></div>
@@ -17,22 +25,31 @@
     </div>
 
     <ng-container *ngIf="application() as app">
+      <!-- Outcome: decision and anything that needs attention -->
+      <div *ngIf="outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
+      <i class="fa-solid outcome-icon" [ngClass]="o.icon" aria-hidden="true"></i>
+      <div class="outcome-body">
+        <strong>{{ o.title }}</strong>
+        <p *ngIf="o.text">{{ o.text }}</p>
+        <ul *ngIf="o.issues.length">
+          <li *ngFor="let i of o.issues">{{ i }}</li>
+        </ul>
+      </div>
+      
+    </div>
+
       <!-- Status -->
       <div class="card box">
         <table class="plain-table">
-          <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + app.status.toLowerCase().replace(' ', '-')">{{ app.status }}</span></td></tr>
-          <tr *ngIf="app.adminRemarks"><th>Remarks</th><td>{{ app.adminRemarks }}</td></tr>
+          <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + app.status.toLowerCase().replace(' ', '-')">{{ app.status | statusLabel }}</span></td></tr>
           <tr *ngIf="app.submittedAt"><th>Submitted On</th><td>{{ app.submittedAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
         </table>
 
-        <div *ngIf="app.status === 'Payment Pending'" class="alert alert-info">
-          <span>Your form and documents are saved. Pay the application fee to complete your submission.</span>
-          <a routerLink="/applicant/payment" class="btn btn-sm btn-primary">Pay Fee</a>
+        <div *ngIf="app.status === 'Payment Pending'" class="actions">
+          <a routerLink="/applicant/payment" class="btn btn-primary">Pay Fee</a>
         </div>
 
-        <div *ngIf="canCorrect" class="alert alert-warning">
-          <span>Please replace the rejected documents below, then click <strong>Resubmit</strong>.</span>
-        </div>
+        <p *ngIf="canCorrect" class="muted">Upload the rejected documents again below, then click <strong>Resubmit</strong>.</p>
 
         <div class="actions" *ngIf="app.applicationId || canCorrect">
           <button *ngIf="app.applicationId" class="btn btn-outline" (click)="downloadSlip()" [disabled]="busyKey() === 'slip'">
@@ -55,13 +72,14 @@
             <tr *ngFor="let d of app.documents">
               <td>{{ d.label }}<br><small class="muted">{{ d.originalName }}</small></td>
               <td>
-                <span [class.text-green]="d.verification.status === 'Verified'" [class.text-red]="d.verification.status === 'Rejected'">{{ d.verification.status }}</span>
+                <span *ngIf="d.available === false" class="chip chip-rejected">Not received</span>
+                <span *ngIf="d.available !== false" class="chip" [ngClass]="'chip-' + d.verification.status.toLowerCase()">{{ d.verification.status | statusLabel:'doc' }}</span>
                 <br *ngIf="d.verification.remarks"><small *ngIf="d.verification.remarks">{{ d.verification.remarks }}</small>
               </td>
               <td class="right">
-                <button class="link-btn" (click)="viewDocument(d)">View</button>
-                <ng-container *ngIf="canCorrect && d.verification.status === 'Rejected'">
-                  <label class="link-btn" [attr.for]="'replace-' + d.key">{{ busyKey() === d.key ? 'Uploading...' : 'Replace' }}</label>
+                <button *ngIf="d.available !== false" class="link-btn" (click)="viewDocument(d)">View</button>
+                <ng-container *ngIf="canReplace(d)">
+                  <label class="btn btn-sm btn-primary" [attr.for]="'replace-' + d.key">{{ busyKey() === d.key ? 'Uploading...' : 'Upload again' }}</label>
                   <input type="file" [id]="'replace-' + d.key" class="hidden-input" accept=".pdf,.png,.jpg,.jpeg" (change)="replaceDocument(d, $event)">
                 </ng-container>
               </td>
@@ -106,7 +124,7 @@
         <table class="plain-table">
           <tr *ngFor="let h of app.statusHistory">
             <th>{{ h.changedAt | date:'dd MMM yyyy, h:mm a' }}</th>
-            <td><strong>{{ h.toStatus }}</strong><span *ngIf="h.remarks"> - {{ h.remarks }}</span></td>
+            <td><strong>{{ h.toStatus | statusLabel }}</strong><span *ngIf="h.remarks"> - {{ h.remarks }}</span></td>
           </tr>
         </table>
       </div>

@@ -4,7 +4,22 @@
       <a routerLink="/admin/applications" class="link-btn back">&larr; All applications</a>
     </div>
 
-    <p *ngIf="loading() && !detail()"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+    <div *ngIf="loading() && !detail()" class="sk-stack" aria-busy="true">
+      <span class="sr-only" role="status">Loading application</span>
+      <div class="card box sk-stack">
+        <div class="sk-row"><app-skeleton width="40%" height="24px" /><app-skeleton variant="pill" width="110px" height="26px" /></div>
+        <app-skeleton width="55%" />
+      </div>
+      <div class="card box sk-stack">
+        <app-skeleton width="120px" height="20px" />
+        <app-skeleton variant="text" [lines]="2" />
+        <div class="sk-row"><app-skeleton height="38px" /><app-skeleton height="38px" /><app-skeleton height="38px" /></div>
+      </div>
+      <div class="card box sk-stack">
+        <app-skeleton width="120px" height="20px" />
+        <app-skeleton *ngFor="let i of [1, 2, 3, 4]" height="44px" />
+      </div>
+    </div>
     <div *ngIf="error()" class="alert alert-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span></div>
     <div *ngIf="message()" class="alert alert-success" role="status"><i class="fa-solid fa-circle-check"></i><span>{{ message() }}</span></div>
 
@@ -16,7 +31,7 @@
             <h2>{{ a.fullName }}</h2>
             <p class="muted">{{ a.applicationId || 'No application ID (fee not paid)' }} &middot; {{ a.program || a.department }}</p>
           </div>
-          <span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status }}</span>
+          <span class="status-pill" [ngClass]="statusClass(a.status)">{{ a.status | statusLabel }}</span>
         </div>
         <p *ngIf="a.adminRemarks"><strong>Latest remarks:</strong> {{ a.adminRemarks }}</p>
         <div class="actions" *ngIf="a.applicationId">
@@ -27,26 +42,39 @@
       <!-- Decision -->
       <div class="card box">
         <h3>Decision</h3>
-        <p *ngIf="!a.allowedTransitions?.length" class="muted">
-          No action available in '{{ a.status }}'.
-          <span *ngIf="a.status === 'Payment Pending'">Waiting for the applicant to pay the fee.</span>
-          <span *ngIf="a.status === 'Correction Requested'">Waiting for the applicant to replace documents and resubmit.</span>
+        <p class="doc-summary">
+          Documents: <strong class="text-green">{{ docCount('Verified') }} approved</strong>,
+          <strong>{{ docCount('Pending') }} pending</strong>,
+          <strong class="text-red">{{ docCount('Rejected') }} rejected</strong><span *ngIf="missingDocs > 0" class="text-red">, {{ missingDocs }} file(s) missing</span>
+          (of {{ a.documents.length }})
+        </p>
+        <p *ngIf="!a.allowedTransitions?.length" class="muted" [ngSwitch]="a.status">
+          <span *ngSwitchCase="'Payment Pending'">No decision yet: waiting for the applicant to pay the fee.</span>
+          <span *ngSwitchCase="'Correction Requested'">No decision yet: waiting for the applicant to upload corrected documents.</span>
+          <span *ngSwitchCase="'Selected'">This application is <strong class="text-green">approved</strong>. The decision is final.</span>
+          <span *ngSwitchCase="'Rejected'">This application is <strong class="text-red">rejected</strong>. The decision is final.</span>
         </p>
         <ng-container *ngIf="a.allowedTransitions?.length">
-          <div class="decision-row">
-            <label *ngFor="let t of a.allowedTransitions" class="radio">
-              <input type="radio" name="target" [value]="t" [(ngModel)]="targetStatus"> {{ t }}
-            </label>
-          </div>
-          <p *ngIf="targetStatus === 'Selected' && pendingOrRejectedDocs > 0" class="text-red small">
-            {{ pendingOrRejectedDocs }} document(s) are not verified yet. All documents must be verified before selecting.
-          </p>
-          <p *ngIf="targetStatus === 'Correction Requested'" class="muted small">Reject the documents that need correction first. The applicant will be emailed.</p>
-          <textarea class="form-control" rows="2" [(ngModel)]="remarks" [placeholder]="remarksRequired ? 'Remarks (required)' : 'Remarks (optional)'" aria-label="Remarks"></textarea>
-          <div class="actions">
-            <button class="btn btn-primary" (click)="applyStatus()" [disabled]="!targetStatus || busy() === 'status'">
-              {{ busy() === 'status' ? 'Saving...' : 'Apply' }}
+          <div class="decision-row" role="group" aria-label="Decision">
+            <button *ngFor="let t of a.allowedTransitions" type="button" class="btn decision" [ngClass]="'decision-' + decisionTone(t)"
+              [class.chosen]="targetStatus === t" [attr.aria-pressed]="targetStatus === t" (click)="choose(t)">
+              <i class="fa-solid" [ngClass]="decisionIcon(t)"></i> {{ decisionLabel(t) }}
             </button>
+          </div>
+
+          <div *ngIf="targetStatus" class="confirm-box">
+            <p *ngIf="targetStatus === 'Selected' && pendingOrRejectedDocs > 0" class="text-red small">
+              {{ pendingOrRejectedDocs }} document(s) are not approved yet. Approve every document before approving the application.
+            </p>
+            <p *ngIf="targetStatus === 'Correction Requested'" class="muted small">Reject the documents that need to be uploaded again first. The applicant will be emailed.</p>
+            <label class="form-label" for="remarks">Message to applicant <span *ngIf="remarksRequired" class="required">*</span></label>
+            <textarea id="remarks" class="form-control" rows="2" [(ngModel)]="remarks" [placeholder]="remarksRequired ? 'Required' : 'Optional'"></textarea>
+            <div class="actions">
+              <button type="button" class="btn btn-outline" (click)="targetStatus = ''; remarks = ''">Cancel</button>
+              <button type="button" class="btn solid" [ngClass]="'decision-' + decisionTone(targetStatus)" (click)="applyStatus()" [disabled]="busy() === 'status'">
+                {{ busy() === 'status' ? 'Saving...' : 'Confirm: ' + decisionLabel(targetStatus) }}
+              </button>
+            </div>
           </div>
         </ng-container>
       </div>
@@ -54,7 +82,7 @@
       <!-- Documents -->
       <div class="card box">
         <h3>Documents</h3>
-        <p *ngIf="!canVerify" class="muted small">Documents can be verified when the application is Submitted, in Review or On Hold.</p>
+        <p *ngIf="!canVerify" class="muted small">Documents can be approved or rejected when the application is Submitted, Under Review or On Hold.</p>
         <table class="plain-table docs">
           <thead><tr><th>Document</th><th>Status</th><th></th></tr></thead>
           <tbody>
@@ -64,14 +92,18 @@
                 <small class="muted">{{ d.originalName }} &middot; {{ (d.fileSize / 1024) | number:'1.0-1' }} KB</small>
               </td>
               <td>
-                <span [class.text-green]="d.verification.status === 'Verified'" [class.text-red]="d.verification.status === 'Rejected'">{{ d.verification.status }}</span>
+                <span *ngIf="d.available === false" class="chip chip-rejected">File missing</span>
+                <span *ngIf="d.available !== false" class="chip" [ngClass]="'chip-' + d.verification.status.toLowerCase()">{{ d.verification.status | statusLabel:'doc' }}</span>
                 <br *ngIf="d.verification.remarks"><small *ngIf="d.verification.remarks">{{ d.verification.remarks }}</small>
               </td>
-              <td class="right">
-                <button class="link-btn" (click)="viewDocument(d)">View</button>
+              <td class="right doc-actions">
+                <button *ngIf="d.available !== false" class="btn btn-sm btn-outline" (click)="viewDocument(d)">View</button>
                 <ng-container *ngIf="canVerify">
-                  <button class="link-btn" (click)="verify(d)" [disabled]="busy() === d.key || d.verification.status === 'Verified'">Verify</button>
-                  <button class="link-btn" (click)="startReject(d)" [disabled]="busy() === d.key">Reject</button>
+                  <button *ngIf="d.available !== false" class="btn btn-sm decision-approve" (click)="verify(d)" [disabled]="busy() === d.key || d.verification.status === 'Verified'">
+                    {{ d.verification.status === 'Verified' ? 'Approved' : 'Approve' }}
+                  </button>
+                  <button *ngIf="d.available === false" class="btn btn-sm decision-reject" (click)="askReupload(d)" [disabled]="busy() === d.key || d.verification.status === 'Rejected'">Ask to re-upload</button>
+                  <button *ngIf="d.available !== false" class="btn btn-sm decision-reject" (click)="startReject(d)" [disabled]="busy() === d.key">Reject</button>
                 </ng-container>
                 <div *ngIf="rejectingKey() === d.key" class="reject-box">
                   <input class="form-control" [(ngModel)]="rejectReason[d.key]" placeholder="Reason (shown to applicant)" aria-label="Reject reason">
@@ -155,7 +187,7 @@
             <tr *ngFor="let e of detail()?.auditLog">
               <td>{{ e.createdAt | date:'dd MMM, h:mm:ss a' }}</td>
               <td>{{ e.actorRole }}</td>
-              <td>{{ e.action }}<span *ngIf="e.toStatus"> ({{ e.fromStatus }} &rarr; {{ e.toStatus }})</span></td>
+              <td>{{ e.action | statusLabel:'action' }}<span *ngIf="e.toStatus"> ({{ e.fromStatus | statusLabel }} &rarr; {{ e.toStatus | statusLabel }})</span></td>
               <td>{{ e.details }}</td>
             </tr>
           </tbody>

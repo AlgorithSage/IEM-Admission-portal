@@ -1,42 +1,64 @@
 <div class="modal-backdrop" (click)="onBackdropClick($event)">
-  <div class="modal-box">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pathway-title">
     <div class="modal-header">
       <img src="assets/iem-logo.png" alt="IEM Logo" class="modal-iem-logo">
-      <h2>Sign In</h2>
-      <p>Choose how you want to sign in</p>
-      <button class="close-btn" (click)="close.emit()">
+      <h2 id="pathway-title">{{ role() === 'applicant' ? 'Applicant' : role() === 'admin' ? 'Admission Staff' : 'Sign In / Register' }}</h2>
+      <p>{{ role() ? 'Log in to your account or create a new one' : 'Who are you?' }}</p>
+      <button type="button" class="close-btn" (click)="close.emit()" aria-label="Close">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
-    <div class="pathway-options">
-      <!-- Applicant Portal Option -->
-      <div class="pathway-card applicant-card" (click)="selectPathway('applicant')">
-        <div class="card-icon">
-          <i class="fa-solid fa-user-graduate"></i>
-        </div>
+    <!-- Step 1: who is signing in -->
+    <div *ngIf="!role()" class="pathway-options">
+      <button type="button" class="pathway-card" (click)="role.set('applicant')">
+        <div class="card-icon"><i class="fa-solid fa-user-graduate"></i></div>
         <div class="card-content">
-                    <h3>Applicant</h3>
+          <h3>Applicant</h3>
           <p>Register, fill the admission form, pay the fee and track your application.</p>
         </div>
-        <div class="card-arrow">
-          <i class="fa-solid fa-arrow-right"></i>
+        <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      </button>
+
+      <button type="button" class="pathway-card" (click)="role.set('admin')">
+        <div class="card-icon admin-icon"><i class="fa-solid fa-user-shield"></i></div>
+        <div class="card-content">
+          <h3>Admission Staff</h3>
+          <p>Review applications, approve documents and record decisions.</p>
+        </div>
+        <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      </button>
+    </div>
+
+    <!-- Step 2: log in or register -->
+    <div *ngIf="role()" class="pathway-options">
+      <button type="button" class="pathway-card" (click)="go('login')">
+        <div class="card-icon"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
+        <div class="card-content">
+          <h3>Log in</h3>
+          <p>I already have an account.</p>
+        </div>
+        <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      </button>
+
+      <button *ngIf="role() === 'applicant'" type="button" class="pathway-card" (click)="go('register')">
+        <div class="card-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div class="card-content">
+          <h3>Create account</h3>
+          <p>New applicant? Register with your email and mobile number.</p>
+        </div>
+        <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+      </button>
+
+      <div *ngIf="role() === 'admin'" class="pathway-card static">
+        <div class="card-icon admin-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div class="card-content">
+          <h3>New staff account</h3>
+          <p>Staff accounts are created by the admission office. Contact the portal administrator for access.</p>
         </div>
       </div>
 
-      <!-- Administrator Portal Option -->
-      <div class="pathway-card admin-card" (click)="selectPathway('admin')">
-        <div class="card-icon admin-icon">
-          <i class="fa-solid fa-user-shield"></i>
-        </div>
-        <div class="card-content">
-                    <h3>Admission Staff</h3>
-          <p>Review applications, verify documents and record decisions.</p>
-        </div>
-        <div class="card-arrow">
-          <i class="fa-solid fa-arrow-right"></i>
-        </div>
-      </div>
+      <button type="button" class="link-btn back-btn" (click)="role.set(null)">&larr; Back</button>
     </div>
   </div>
 </div>

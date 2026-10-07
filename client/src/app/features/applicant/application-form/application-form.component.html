@@ -18,7 +18,18 @@
       </div>
     </div>
 
-    <p *ngIf="!appChecked()" class="muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+    <div *ngIf="!appChecked()" class="form-skeleton" aria-busy="true">
+      <span class="sr-only" role="status">Loading the application form</span>
+      <div class="card sk-stack sk-side">
+        <div *ngFor="let i of [1, 2, 3, 4, 5, 6, 7]" class="sk-row"><app-skeleton variant="circle" width="28px" /><app-skeleton width="70%" /></div>
+      </div>
+      <div class="card sk-stack sk-main">
+        <app-skeleton width="40%" height="22px" />
+        <div class="sk-grid">
+          <div *ngFor="let i of [1, 2, 3, 4, 5, 6]" class="sk-stack"><app-skeleton width="35%" height="12px" /><app-skeleton height="44px" /></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Already applied: show the submitted application instead of a new form -->
     <div *ngIf="alreadySubmittedApp() as existing" class="card submitted-card">
@@ -27,7 +38,7 @@
         <tr><th>Application ID</th><td><strong>{{ existing.applicationId || 'Issued after the fee is paid' }}</strong></td></tr>
         <tr><th>Program</th><td>{{ existing.program || existing.department }}</td></tr>
         <tr *ngIf="existing.streamPreferences?.length"><th>Stream Preferences</th><td>{{ existing.streamPreferences!.join(' > ') }}</td></tr>
-        <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + existing.status.toLowerCase().replace(' ', '-')">{{ existing.status }}</span></td></tr>
+        <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + existing.status.toLowerCase().replace(' ', '-')">{{ existing.status | statusLabel }}</span></td></tr>
         <tr *ngIf="existing.submittedAt"><th>Submitted On</th><td>{{ existing.submittedAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
       </table>
       <p class="muted small-note">Each applicant can submit one application. To change it, contact the admission office on 8010700500.</p>
@@ -190,6 +201,7 @@
             <div class="form-group">
               <label class="form-label" for="gender">Gender <span class="required">*</span></label>
               <select id="gender" class="form-control" formControlName="gender">
+                <option value="" disabled>Select</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
@@ -199,6 +211,7 @@
             <div class="form-group">
               <label class="form-label" for="category">Category <span class="required">*</span> <span class="info-tip" tabindex="0" role="note" aria-label="More information"><i class="fa-solid fa-circle-info"></i><span class="info-tip-text">A category certificate may be requested at document verification.</span></span></label>
               <select id="category" class="form-control" formControlName="category">
+                <option value="" disabled>Select</option>
                 <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
               </select>
             </div>

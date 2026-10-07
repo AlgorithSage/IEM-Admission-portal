@@ -28,4 +28,20 @@ const serializeApplication = (app, { forAdmin = false } = {}) => {
   return json;
 };
 
-module.exports = { serializeApplication, documentsView };
+/**
+ * Adds `available` to each document (does its file still exist?). Used on single-application
+ * responses only, since it may cost one storage request per document.
+ */
+const withAvailability = async (json, app) => {
+  const storage = require('./storage.service');
+  const slots = documentSlots(app);
+  await Promise.all(
+    json.documents.map(async (doc) => {
+      const slot = slots.find((s) => s.key === doc.key);
+      doc.available = slot ? await storage.exists(slot.get()) : false;
+    })
+  );
+  return json;
+};
+
+module.exports = { serializeApplication, documentsView, withAvailability };

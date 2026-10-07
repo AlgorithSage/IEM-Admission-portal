@@ -694,3 +694,31 @@
 .small-note {
   font-size: 0.85rem;
 }
+
+/* Loading placeholder: same layout as the phased form */
+.form-skeleton {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.form-skeleton .card {
+  padding: 24px;
+}
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .form-skeleton,
+  .sk-grid {
+    grid-template-columns: 1fr;
+  }
+  .sk-side {
+    display: none;
+  }
+}

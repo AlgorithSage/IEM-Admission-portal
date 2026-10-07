@@ -1,6 +1,8 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+
+type Role = 'applicant' | 'admin';
 
 @Component({
   selector: 'app-pathway-modal',
@@ -12,14 +14,19 @@ import { Router } from '@angular/router';
 export class PathwayModalComponent {
   @Output() close = new EventEmitter<void>();
 
+  /** Step 1 picks the role, step 2 picks log in or register */
+  readonly role = signal<Role | null>(null);
+
   constructor(private router: Router) {}
 
-  selectPathway(path: 'applicant' | 'admin'): void {
+  go(mode: 'login' | 'register'): void {
+    const role = this.role();
+    if (!role) return;
     this.close.emit();
-    if (path === 'applicant') {
-      this.router.navigate(['/applicant/login']);
-    } else {
+    if (role === 'admin') {
       this.router.navigate(['/admin/login']);
+    } else {
+      this.router.navigate(['/applicant/login'], mode === 'register' ? { queryParams: { mode: 'register' } } : {});
     }
   }
 

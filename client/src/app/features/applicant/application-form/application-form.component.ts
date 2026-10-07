@@ -1,5 +1,7 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
+import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -86,7 +88,7 @@ export interface ChosenStream {
 @Component({
   selector: 'app-application-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, SkeletonComponent, StatusLabelPipe, FormsModule, ReactiveFormsModule, RouterModule],
   templateUrl: './application-form.component.html',
   styleUrls: ['./application-form.component.css']
 })
@@ -196,8 +198,8 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
         phone: [user?.phone || '', v((x) => bva.validatePhone(x))],
         alternatePhone: ['', v((x) => this.optionalPhone(x, 'Alternate mobile number'))],
         dob: ['', v((x) => bva.validateDob(x))],
-        gender: ['Male', Validators.required],
-        category: ['General', Validators.required],
+        gender: ['', Validators.required],
+        category: ['', Validators.required],
         nationality: ['Indian', v((x) => bva.validateText(x, 'Nationality', 2, 40, true))],
 
         // Address

@@ -6,7 +6,11 @@
     </div>
     <div class="card box">
 
-      <p *ngIf="stage() === 'loading'"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
+      <div *ngIf="stage() === 'loading'" class="sk-stack" aria-busy="true">
+        <span class="sr-only" role="status">Loading payment details</span>
+        <div *ngFor="let i of [1, 2, 3, 4]" class="sk-row"><app-skeleton width="35%" /><app-skeleton width="45%" /></div>
+        <app-skeleton width="180px" height="44px" />
+      </div>
 
       <div *ngIf="error()" class="alert alert-error" role="alert">
         <i class="fa-solid fa-circle-exclamation"></i><span>{{ error() }}</span>

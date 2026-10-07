@@ -6,7 +6,7 @@
     </div>
     <select class="form-control action-filter" [(ngModel)]="action" (change)="onFilter()" aria-label="Filter by action">
       <option value="">All actions</option>
-      <option *ngFor="let a of actions()" [value]="a">{{ label(a) }}</option>
+      <option *ngFor="let a of actions()" [value]="a">{{ a | statusLabel:'action' }}</option>
     </select>
   </div>
 
@@ -14,7 +14,7 @@
 
   <div class="card box">
     <div class="table-wrap">
-      <table class="plain-table log">
+      <table class="plain-table log" [class.refreshing]="loading()" [attr.aria-busy]="loading()">
         <thead>
           <tr><th>Date</th><th>By</th><th>Action</th><th>Application</th><th>Details</th></tr>
         </thead>
@@ -22,7 +22,7 @@
           <tr *ngFor="let e of items()">
             <td class="nowrap">{{ e.createdAt | date:'dd MMM yyyy, h:mm a' }}</td>
             <td class="cap">{{ e.actorRole }}</td>
-            <td>{{ label(e.action) }}<span *ngIf="e.toStatus" class="muted"> ({{ e.fromStatus }} &rarr; {{ e.toStatus }})</span></td>
+            <td>{{ e.action | statusLabel:'action' }}<span *ngIf="e.toStatus" class="muted"> ({{ e.fromStatus | statusLabel }} &rarr; {{ e.toStatus | statusLabel }})</span></td>
             <td class="nowrap">
               <a *ngIf="e.application as app" [routerLink]="['/admin/applications', app._id]" class="link-btn">{{ app.applicationId || app.fullName }}</a>
               <span *ngIf="!e.application" class="muted">-</span>
@@ -30,7 +30,9 @@
             <td>{{ e.details }}</td>
           </tr>
           <tr *ngIf="!loading() && items().length === 0"><td colspan="5" class="muted">No entries.</td></tr>
-          <tr *ngIf="loading()"><td colspan="5" class="muted">Loading...</td></tr>
+          <ng-container *ngIf="loading() && !items().length">
+              <tr *ngFor="let i of [1, 2, 3, 4, 5, 6, 7, 8]" aria-hidden="true"><td><app-skeleton width="80%" /></td><td><app-skeleton width="60%" /></td><td><app-skeleton width="50%" /></td><td><app-skeleton width="85%" /></td><td><app-skeleton width="70%" /></td></tr>
+            </ng-container>
         </tbody>
       </table>
     </div>

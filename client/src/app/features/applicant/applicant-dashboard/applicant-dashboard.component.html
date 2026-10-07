@@ -8,12 +8,38 @@
       </div>
       <div *ngIf="!loading()" class="dash-status">
         <span class="muted">Status</span>
-        <span class="status-pill" [ngClass]="statusClass">{{ application()?.status || 'Not Started' }}</span>
+        <span class="status-pill" [ngClass]="statusClass">{{ (application()?.status | statusLabel) || 'Not Started' }}</span>
       </div>
     </div>
 
+    <!-- Loading -->
+    <div *ngIf="loading()" class="sk-stack" aria-busy="true">
+      <span class="sr-only" role="status">Loading your application</span>
+      <div class="card box sk-row"><app-skeleton variant="circle" width="36px" /><app-skeleton variant="text" [lines]="2" /></div>
+      <div class="card box sk-stack">
+        <app-skeleton width="180px" height="20px" />
+        <div class="sk-row sk-steps">
+          <app-skeleton *ngFor="let i of [1, 2, 3, 4, 5]" variant="circle" width="44px" />
+        </div>
+      </div>
+      <div class="card box sk-stack"><app-skeleton *ngFor="let i of [1, 2, 3]" height="18px" /></div>
+    </div>
+
+    <!-- Notification: decision and anything that needs the applicant's attention -->
+    <div *ngIf="outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
+      <i class="fa-solid outcome-icon" [ngClass]="o.icon" aria-hidden="true"></i>
+      <div class="outcome-body">
+        <strong>{{ o.title }}</strong>
+        <p *ngIf="o.text">{{ o.text }}</p>
+        <ul *ngIf="o.issues.length">
+          <li *ngFor="let i of o.issues">{{ i }}</li>
+        </ul>
+      </div>
+      <a routerLink="/applicant/status" class="btn btn-sm btn-outline outcome-action">Check status</a>
+    </div>
+
     <!-- Application Lifecycle Progress Bar -->
-    <div class="progress-section card">
+    <div *ngIf="!loading()" class="progress-section card">
       <h3 class="progress-title">Admission Progress</h3>
       <div class="steps-tracker">
         <ng-container *ngFor="let step of steps(); let last = last">
@@ -30,12 +56,11 @@
     </div>
 
     <!-- Next action + summary -->
-    <div class="card box">
+    <div *ngIf="!loading()" class="card box">
       <table class="plain-table" *ngIf="application() as app">
         <tr *ngIf="app.applicationId"><th>Application ID</th><td><strong>{{ app.applicationId }}</strong></td></tr>
         <tr><th>Program</th><td>{{ app.program || app.department }}<span *ngIf="app.streamPreferences?.length"> - {{ app.streamPreferences![0] }}</span></td></tr>
-        <tr><th>Documents</th><td>{{ app.documents.length }} uploaded, {{ verifiedCount }} verified</td></tr>
-        <tr *ngIf="app.adminRemarks"><th>Latest Remarks</th><td>{{ app.adminRemarks }}</td></tr>
+        <tr><th>Documents</th><td>{{ app.documents.length }} uploaded, {{ verifiedCount }} approved</td></tr>
       </table>
       <p *ngIf="!application() && !loading()">Start your admission application. Keep your Class X, Class XII and entrance exam documents ready (PDF/JPG/PNG, max 5 MB each).</p>
       <div class="actions">

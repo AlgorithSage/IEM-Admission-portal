@@ -167,6 +167,8 @@ const register = async (email, extra = {}) =>
     check('applicant persisted in PostgreSQL', pgRow.rows.length === 1 && pgRow.rows[0].role === 'applicant');
     const loginA = await api('POST', '/auth/login', { json: { email: emailA, password: 'Test@12345', role: 'applicant' } });
     check('applicant logs in', loginA.status === 200 && !!loginA.data.token);
+    const claims = JSON.parse(Buffer.from(loginA.data.token.split('.')[1], 'base64url').toString());
+    check('session token expires after 1 day', claims.exp - claims.iat === 86400, `${claims.exp - claims.iat}s`);
     const regB = await register(emailB);
     const tokenB = regB.data.token;
 
@@ -353,6 +355,31 @@ const register = async (email, extra = {}) =>
     check('status emails: correction, on hold, selected', statusMails.length === 3 && detail.notifications.every((n) => n.status === 'Sent'), statusMails.join(' | '));
     const history = detail.application.statusHistory.map((h) => h.toStatus).join(' > ');
     check('status history', history === 'Payment Pending > Submitted > Review > Correction Requested > Review > On Hold > Selected', history);
+
+    check('status email subject says Approved', statusMails.some((m) => /: Approved$/.test(m)), statusMails.join(' | '));
+    check('applicant sees default remarks when the admin wrote none', (await api('GET', '/applications/my-application', { token: tokenB })).data.application.adminRemarks === 'Application submitted. Waiting for document scrutiny.');
+
+    // ---------------- Missing stored file ----------------
+    console.log('\nMissing document file');
+    const idB = subB.data.application._id;
+    const rawB = await db.collection('applications').findOne({ _id: new mongoose.Types.ObjectId(idB) });
+    fs.rmSync(path.join(UPLOAD_DIR, rawB.classX.marksheet.fileName), { force: true });
+    const viewB = (await api('GET', `/admin/applications/${idB}`, { token: tokenAdmin })).data.application;
+    const lostDoc = viewB.documents.find((d) => d.key === 'classXMarksheet');
+    check('admin detail flags the missing file', lostDoc.available === false && viewB.documents.filter((d) => d.available).length === 3);
+    check('applicant also sees it as missing', (await api('GET', '/applications/my-application', { token: tokenB })).data.application.documents.find((d) => d.key === 'classXMarksheet').available === false);
+    const approveLost = await api('PATCH', `/admin/applications/${idB}/documents/classXMarksheet`, { token: tokenAdmin, json: { status: 'Verified' } });
+    check('cannot approve a missing file -> 400', approveLost.status === 400 && /missing/.test(approveLost.data.message));
+    const askAgain = await api('PATCH', `/admin/applications/${idB}/documents/classXMarksheet`, { token: tokenAdmin, json: { status: 'Rejected', remarks: 'The file was not received. Please upload it again.' } });
+    check('admin asks for re-upload (reject with reason)', askAgain.status === 200 && /rejected/.test(askAgain.data.message));
+    const okDocReplace = await uploadFile(tokenB, 'x-ok', 'x-ok.pdf');
+    check('applicant cannot replace a file that still exists', (await api('PUT', '/applications/my-application/documents/classXIIMarksheet', { token: tokenB, json: { uploadId: okDocReplace } })).status === 400);
+    const again = await uploadFile(tokenB, 'x-again', 'x-again.pdf');
+    const reup = await api('PUT', '/applications/my-application/documents/classXMarksheet', { token: tokenB, json: { uploadId: again } });
+    const reupDoc = reup.data.application?.documents.find((d) => d.key === 'classXMarksheet');
+    check('applicant uploads the missing file again -> available, Pending review', reup.status === 200 && reupDoc.available === true && reupDoc.verification.status === 'Pending', JSON.stringify(reup.data).slice(0, 200));
+    const reupAudit = await db.collection('auditlogs').findOne({ application: new mongoose.Types.ObjectId(idB), action: 'DOCUMENT_REUPLOADED' });
+    check('re-upload is audited', !!reupAudit);
 
     // ---------------- Delete record ----------------
     console.log('\nAdmin: delete record');

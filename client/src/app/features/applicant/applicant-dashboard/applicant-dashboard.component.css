@@ -112,3 +112,11 @@
   gap: 10px;
   font-size: 0.85rem;
 }
+
+.sk-steps {
+  justify-content: space-between;
+}
+
+.sk-steps app-skeleton {
+  width: auto;
+}
