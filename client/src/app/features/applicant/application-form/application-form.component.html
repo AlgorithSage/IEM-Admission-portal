@@ -7,6 +7,44 @@
         <p>Fill in each section carefully. Fields marked <span class="required">*</span> are required.</p>
       </div>
       <div *ngIf="appChecked() && !alreadySubmittedApp()" class="draft-actions">
+        <!-- Mock Data Auto-Fill Dropdown / Popup -->
+        <div class="mock-data-menu-container">
+          <button
+            type="button"
+            class="btn btn-mock-fill btn-sm"
+            (click)="toggleMockMenu()"
+            aria-haspopup="true"
+            [attr.aria-expanded]="showMockMenu()"
+            title="Auto-fill with mock data"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Fill Mock Data <i class="fa-solid fa-chevron-down ms-1 text-xs"></i>
+          </button>
+
+          <div *ngIf="showMockMenu()" class="mock-dropdown-card card" role="menu">
+            <div class="mock-dropdown-header">
+              <div class="mock-title">
+                <i class="fa-solid fa-bolt text-gold"></i> Auto-Fill Application Data
+              </div>
+              <button type="button" class="btn-close-menu" (click)="toggleMockMenu(false)" aria-label="Close menu">&times;</button>
+            </div>
+            <p class="mock-desc">Select a preset profile to populate all form fields. <em>Document uploads are left untouched for your testing.</em></p>
+            <div class="mock-options-list">
+              <button
+                *ngFor="let p of mockProfiles"
+                type="button"
+                class="mock-profile-item"
+                (click)="fillMockProfile(p.id)"
+              >
+                <div class="mock-profile-icon"><i [class]="p.icon"></i></div>
+                <div class="mock-profile-info">
+                  <div class="mock-profile-title">{{ p.label }}</div>
+                  <div class="mock-profile-subtitle">{{ p.summary }}</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <span *ngIf="saveState() !== 'idle'" class="save-status" [ngSwitch]="saveState()" aria-live="polite">
           <ng-container *ngSwitchCase="'saving'">Saving...</ng-container>
           <ng-container *ngSwitchCase="'saved'">Draft saved {{ savedAt() | date:'h:mm a' }}</ng-container>
@@ -16,6 +54,12 @@
           <i class="fa-regular fa-floppy-disk"></i> Save Draft
         </button>
       </div>
+    </div>
+
+    <!-- Mock Data feedback notification banner -->
+    <div *ngIf="mockFeedback()" class="alert alert-success" role="status">
+      <i class="fa-solid fa-circle-check"></i>
+      <span>{{ mockFeedback() }}</span>
     </div>
 
     <div *ngIf="!appChecked()" class="form-skeleton" aria-busy="true">
@@ -92,7 +136,15 @@
               </span>
             </div>
           </div>
-          <button type="button" class="link-btn" (click)="viewDoc(field)" [disabled]="f.status === 'uploading'" [attr.aria-label]="'View ' + title">View</button>
+          <button
+            type="button"
+            class="link-btn"
+            (click)="viewDoc(field)"
+            [disabled]="f.status !== 'done' || !f.uploadId || saveState() === 'saving' || viewingDoc() === field"
+            [attr.aria-label]="'View ' + title"
+          >
+            <span *ngIf="viewingDoc() === field"><i class="fa-solid fa-spinner fa-spin"></i> </span>View
+          </button>
           <button type="button" class="btn-remove-file" (click)="removeFile(field)" [attr.aria-label]="'Remove ' + title">
             <i class="fa-solid fa-trash-can"></i>
           </button>
@@ -657,7 +709,14 @@
           <td>
             <ng-container *ngIf="d.doc as doc">
               {{ doc.name }} ({{ (doc.size / 1024) | number:'1.0-1' }} KB)
-              <button type="button" class="link-btn" (click)="viewDoc(d.field)">View</button>
+              <button
+                type="button"
+                class="link-btn"
+                (click)="viewDoc(d.field)"
+                [disabled]="doc.status !== 'done' || !doc.uploadId || saveState() === 'saving' || viewingDoc() === d.field"
+              >
+                <span *ngIf="viewingDoc() === d.field"><i class="fa-solid fa-spinner fa-spin"></i> </span>View
+              </button>
             </ng-container>
           </td>
         </tr>

@@ -97,7 +97,14 @@
                 <br *ngIf="d.verification.remarks"><small *ngIf="d.verification.remarks">{{ d.verification.remarks }}</small>
               </td>
               <td class="right doc-actions">
-                <button *ngIf="d.available !== false" class="btn btn-sm btn-outline" (click)="viewDocument(d)">View</button>
+                <button
+                  *ngIf="d.available !== false"
+                  class="btn btn-sm btn-outline"
+                  (click)="viewDocument(d)"
+                  [disabled]="viewingKey() === d.key"
+                >
+                  <span *ngIf="viewingKey() === d.key"><i class="fa-solid fa-spinner fa-spin"></i> </span>View
+                </button>
                 <ng-container *ngIf="canVerify">
                   <button *ngIf="d.available !== false" class="btn btn-sm decision-approve" (click)="verify(d)" [disabled]="busy() === d.key || d.verification.status === 'Verified'">
                     {{ d.verification.status === 'Verified' ? 'Approved' : 'Approve' }}

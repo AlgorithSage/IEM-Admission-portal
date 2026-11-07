@@ -107,7 +107,7 @@ const uploadContent = async (req, res, next) => {
     if (!upload) throw httpError(404, 'File not found.');
     res.setHeader('Content-Type', upload.mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(upload.originalName)}"`);
-    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Cache-Control', 'private, max-age=600');
     const ref = upload.storage === 'blob'
       ? { storage: 'blob', fileName: upload.pathname, filePath: upload.key }
       : { storage: 'local', fileName: upload.key };

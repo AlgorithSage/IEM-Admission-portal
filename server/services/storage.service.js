@@ -24,6 +24,12 @@ const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 // Lazily loaded so local development does not need the Blob SDK initialised
 const blobSdk = () => require('@vercel/blob');
 
+// In-memory cache for blobs to make document viewing instantaneous (<10ms)
+// Key: filePath (URL) -> { buffer: Buffer, expiresAt: number }
+const blobCache = new Map();
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
+const MAX_CACHE_ENTRIES = 100;
+
 const localPath = (fileName) => {
   const safe = path.basename(fileName || '');
   return safe ? path.join(uploadDir, safe) : null;
@@ -32,9 +38,34 @@ const localPath = (fileName) => {
 /** Sends a stored document to the HTTP response. Returns false when the file no longer exists. */
 const streamTo = async (ref, res) => {
   if (ref.storage === 'blob') {
+    const cached = blobCache.get(ref.filePath);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.setHeader('Content-Length', cached.buffer.length);
+      res.end(cached.buffer);
+      return true;
+    }
+
     const result = await blobSdk().get(ref.filePath, { access: 'private' });
     if (!result || !result.stream) return false;
-    Readable.fromWeb(result.stream).pipe(res);
+
+    // Buffer the stream chunks for caching and fast response
+    const chunks = [];
+    const reader = result.stream.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(Buffer.isBuffer(value) ? value : Buffer.from(value));
+    }
+    const buffer = Buffer.concat(chunks);
+
+    if (blobCache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = blobCache.keys().next().value;
+      blobCache.delete(oldestKey);
+    }
+    blobCache.set(ref.filePath, { buffer, expiresAt: Date.now() + CACHE_TTL_MS });
+
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
     return true;
   }
   const p = localPath(ref.fileName);
@@ -46,7 +77,11 @@ const streamTo = async (ref, res) => {
 /** Whether a stored document's file still exists (local disk check or a Blob HEAD request). */
 const exists = async (ref) => {
   try {
-    if (ref.storage === 'blob') return !!(await headBlob(ref.filePath));
+    if (ref.storage === 'blob') {
+      const cached = blobCache.get(ref.filePath);
+      if (cached && cached.expiresAt > Date.now()) return true;
+      return !!(await headBlob(ref.filePath));
+    }
     const p = localPath(ref.fileName);
     return !!p && fs.existsSync(p);
   } catch (err) {
@@ -58,8 +93,10 @@ const exists = async (ref) => {
 /** Best-effort delete; storage clean-up must never fail the business operation. */
 const remove = async ({ storage, key, fileName, filePath }) => {
   try {
+    const blobKey = key || filePath;
+    if (blobKey) blobCache.delete(blobKey);
     if (storage === 'blob') {
-      await blobSdk().del(key || filePath);
+      await blobSdk().del(blobKey);
     } else {
       const p = localPath(key || fileName);
       if (p) fs.unlink(p, () => {});

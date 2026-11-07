@@ -4,23 +4,66 @@ import { Observable } from 'rxjs';
 /**
  * Opens an authenticated file (fetched as a Blob) in a new tab.
  * The tab is opened synchronously inside the click handler so popup blockers allow it,
- * then pointed at the blob once it arrives.
+ * with an immediate loading state, then pointed at the blob once it arrives.
  */
-export function openBlobInNewTab(source: Observable<Blob>, onError: (message: string) => void): void {
+export function openBlobInNewTab(
+  source: Observable<Blob>,
+  onError: (message: string) => void,
+  onComplete?: () => void
+): void {
   const tab = window.open('', '_blank');
+  if (tab && tab.document) {
+    try {
+      tab.document.title = 'Loading Document...';
+      tab.document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#f8fafc;">
+          <div style="background:#1e293b;padding:36px 44px;border-radius:14px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);text-align:center;max-width:380px;border:1px solid #334155;">
+            <div style="width:42px;height:42px;border:3px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:iem-spin 0.8s linear infinite;margin:0 auto 18px;"></div>
+            <h3 style="margin:0 0 8px 0;font-size:17px;font-weight:600;color:#f1f5f9;">Loading Document</h3>
+            <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5;">Retrieving your uploaded file from secure storage, please wait...</p>
+          </div>
+          <style>@keyframes iem-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+        </div>
+      `;
+    } catch {
+      // Ignored for restrictive environments
+    }
+  }
+
   source.subscribe({
     next: (blob) => {
+      onComplete?.();
       const url = URL.createObjectURL(blob);
       if (tab) {
-        tab.location.href = url;
+        tab.location.replace(url);
       } else {
         window.location.href = url;
       }
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
     },
     error: async (err) => {
-      tab?.close();
-      onError(await errorMessage(err));
+      onComplete?.();
+      const msg = await errorMessage(err);
+      if (tab && tab.document) {
+        try {
+          tab.document.title = 'Unable to Load Document';
+          tab.document.body.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#f8fafc;">
+              <div style="background:#1e293b;padding:36px 44px;border-radius:14px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);text-align:center;max-width:380px;border:1px solid #334155;">
+                <div style="width:44px;height:44px;background:#450a0a;color:#f87171;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;font-weight:bold;">&times;</div>
+                <h3 style="margin:0 0 8px 0;font-size:17px;font-weight:600;color:#fca5a5;">Could Not Open Document</h3>
+                <p style="margin:0 0 20px 0;font-size:13px;color:#94a3b8;line-height:1.5;">${msg}</p>
+                <button onclick="window.close()" style="background:#0284c7;color:#fff;border:none;padding:9px 20px;border-radius:6px;font-weight:500;cursor:pointer;font-size:13px;">Close Tab</button>
+              </div>
+            </div>
+          `;
+        } catch {
+          tab?.close();
+        }
+      } else {
+        tab?.close();
+      }
+      onError(msg);
     }
   });
 }

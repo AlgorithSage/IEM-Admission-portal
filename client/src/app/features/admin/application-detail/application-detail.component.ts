@@ -148,13 +148,24 @@ export class ApplicationDetailComponent implements OnInit {
     return COMPETITIVE_EXAMS.find((e) => e.code === code)?.score.label || 'Score';
   }
 
+  readonly viewingKey = signal<string | null>(null);
+
   statusClass(status: string): string {
     return 'status-' + status.toLowerCase().replace(' ', '-');
   }
 
   viewDocument(doc: ApplicationDocument): void {
+    if (this.viewingKey() === doc.key) return;
     this.error.set('');
-    openBlobInNewTab(this.applicationService.getDocument(this.id, doc.key), (msg) => (this.error.set(msg)));
+    this.viewingKey.set(doc.key);
+    openBlobInNewTab(
+      this.applicationService.getDocument(this.id, doc.key),
+      (msg) => {
+        this.viewingKey.set(null);
+        this.error.set(msg);
+      },
+      () => this.viewingKey.set(null)
+    );
   }
 
   downloadSlip(): void {

@@ -123,7 +123,7 @@ const streamDocument = async (req, res, next) => {
     const ref = slot.get();
     res.setHeader('Content-Type', ref.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(ref.originalName || ref.fileName)}"`);
-    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Cache-Control', 'private, max-age=600');
     const found = await storage.streamTo(ref, res);
     if (!found) {
       res.removeHeader('Content-Disposition');

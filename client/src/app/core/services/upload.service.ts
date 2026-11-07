@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, of, tap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -28,6 +28,7 @@ interface UploadConfig {
 export class UploadService {
   private readonly api = environment.apiUrl;
   private config?: Promise<UploadConfig>;
+  private readonly blobCache = new Map<string, Blob>();
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -41,22 +42,34 @@ export class UploadService {
 
   async upload(file: File, slot: string): Promise<StagedUpload> {
     const config = await this.getConfig();
+    let staged: StagedUpload;
     if (config.driver === 'blob') {
-      return this.uploadToBlob(file, slot);
+      staged = await this.uploadToBlob(file, slot);
+    } else {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await firstValueFrom(this.http.post<{ upload: StagedUpload }>(`${this.api}/uploads`, fd));
+      staged = res.upload;
     }
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await firstValueFrom(this.http.post<{ upload: StagedUpload }>(`${this.api}/uploads`, fd));
-    return res.upload;
+    // Cache the uploaded file locally so viewing it is 0ms instant
+    this.blobCache.set(staged.uploadId, file);
+    return staged;
   }
 
   /** Content of one of the applicant's own uploads that is not attached to an application yet */
-  content(uploadId: string) {
-    return this.http.get(`${this.api}/uploads/${uploadId}/content`, { responseType: 'blob' });
+  content(uploadId: string): Observable<Blob> {
+    const cached = this.blobCache.get(uploadId);
+    if (cached) {
+      return of(cached);
+    }
+    return this.http
+      .get(`${this.api}/uploads/${uploadId}/content`, { responseType: 'blob' })
+      .pipe(tap((blob) => this.blobCache.set(uploadId, blob)));
   }
 
   /** Best effort: frees storage for a file the applicant replaced before submitting */
   discard(uploadId: string): void {
+    this.blobCache.delete(uploadId);
     this.http.delete(`${this.api}/uploads/${uploadId}`).subscribe({ error: () => {} });
   }
 

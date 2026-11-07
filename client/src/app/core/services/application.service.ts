@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of, tap } from 'rxjs';
 import {
   AdminOverview,
   AdminStats,
@@ -75,8 +75,19 @@ export class ApplicationService {
     return this.http.put<{ draft: ApplicationDraft }>(`${this.api}/applications/my-draft`, draft).pipe(map((r) => r.draft));
   }
 
+  private readonly docCache = new Map<string, Blob>();
+
   replaceDocument(docKey: string, uploadId: string): Observable<AppResponse> {
-    return this.http.put<AppResponse>(`${this.api}/applications/my-application/documents/${encodeURIComponent(docKey)}`, { uploadId });
+    return this.http
+      .put<AppResponse>(`${this.api}/applications/my-application/documents/${encodeURIComponent(docKey)}`, { uploadId })
+      .pipe(
+        tap(() => {
+          // Clear any cached copy of this replaced document
+          for (const key of this.docCache.keys()) {
+            if (key.endsWith(`:${docKey}`)) this.docCache.delete(key);
+          }
+        })
+      );
   }
 
   resubmit(): Observable<AppResponse> {
@@ -100,7 +111,12 @@ export class ApplicationService {
   // ---------- Files (owner or admin; streamed with auth, never public URLs) ----------
 
   getDocument(appId: string, docKey: string): Observable<Blob> {
-    return this.http.get(`${this.api}/applications/${appId}/documents/${encodeURIComponent(docKey)}`, { responseType: 'blob' });
+    const cacheKey = `${appId}:${docKey}`;
+    const cached = this.docCache.get(cacheKey);
+    if (cached) return of(cached);
+    return this.http
+      .get(`${this.api}/applications/${appId}/documents/${encodeURIComponent(docKey)}`, { responseType: 'blob' })
+      .pipe(tap((b) => this.docCache.set(cacheKey, b)));
   }
 
   getSlip(appId: string): Observable<Blob> {

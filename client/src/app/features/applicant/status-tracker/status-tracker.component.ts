@@ -26,6 +26,7 @@ export class StatusTrackerComponent implements OnInit {
   readonly error = signal('');
   readonly message = signal('');
   readonly busyKey = signal('');
+  readonly viewingKey = signal<string | null>(null);
   readonly resubmitting = signal(false);
   readonly outcome = computed(() => applicationOutcome(this.application()));
 
@@ -77,9 +78,17 @@ export class StatusTrackerComponent implements OnInit {
 
   viewDocument(doc: ApplicationDocument): void {
     const app = this.application();
-    if (!app) return;
+    if (!app || this.busyKey() === doc.key || this.viewingKey() === doc.key) return;
     this.error.set('');
-    openBlobInNewTab(this.applicationService.getDocument(app._id, doc.key), (msg) => this.error.set(msg));
+    this.viewingKey.set(doc.key);
+    openBlobInNewTab(
+      this.applicationService.getDocument(app._id, doc.key),
+      (msg) => {
+        this.viewingKey.set(null);
+        this.error.set(msg);
+      },
+      () => this.viewingKey.set(null)
+    );
   }
 
   replaceDocument(doc: ApplicationDocument, event: Event): void {

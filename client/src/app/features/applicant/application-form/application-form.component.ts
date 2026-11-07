@@ -110,6 +110,9 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
   private resumeIndex = 0;
   readonly saveState = signal<SaveState>('idle');
   readonly savedAt = signal<Date | null>(null);
+  readonly viewingDoc = signal<string | null>(null);
+  readonly showMockMenu = signal(false);
+  readonly mockFeedback = signal<string | null>(null);
   private draftSub?: Subscription;
 
   /** Files chosen during this visit (kept for instant local preview) */
@@ -791,13 +794,25 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
 
   /** Opens a document: the local file if chosen in this visit, otherwise the uploaded copy */
   viewDoc(field: UploadField): void {
+    const f = this.docFor(field);
+    if (!f || f.status !== 'done' || !f.uploadId || this.saveState() === 'saving' || this.viewingDoc() === field) {
+      return;
+    }
     const local = this.files[field];
     if (local) {
       this.previewFile(local);
       return;
     }
-    const uploadId = this.uploadState()[field]?.uploadId;
-    if (uploadId) openBlobInNewTab(this.uploadService.content(uploadId), (msg) => (this.fileErrors[field] = msg));
+    this.viewingDoc.set(field);
+    this.fileErrors[field] = '';
+    openBlobInNewTab(
+      this.uploadService.content(f.uploadId),
+      (msg) => {
+        this.viewingDoc.set(null);
+        this.fileErrors[field] = msg;
+      },
+      () => this.viewingDoc.set(null)
+    );
   }
 
   fileErrorFor(field: UploadField): string {
@@ -1030,5 +1045,214 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
+  }
+
+  // ---------- Mock Data Auto-Fill Dropdown / Popup ----------
+
+  readonly mockProfiles = [
+    {
+      id: 'btech-cse',
+      label: 'Archisman Chakraborty — B.Tech (CSE)',
+      summary: 'ICSE (92.4%), ISC (91.8%), WBJEE (Rank 1420), JEE Main (98.6%ile)',
+      icon: 'fa-solid fa-graduation-cap'
+    },
+    {
+      id: 'btech-ece',
+      label: 'Archisman Chakraborty — B.Tech (ECE / IT)',
+      summary: 'CBSE (90.5%), ISC (89.4%), WBJEE (Rank 2850), Science PCM',
+      icon: 'fa-solid fa-microchip'
+    },
+    {
+      id: 'mtech-cse',
+      label: 'Archisman Chakraborty — M.Tech (CSE)',
+      summary: 'B.Tech MAKAUT (84.5%), IEMCET Qualified (Score 280, Rank 320)',
+      icon: 'fa-solid fa-user-graduate'
+    },
+    {
+      id: 'mba',
+      label: 'Archisman Chakraborty — MBA',
+      summary: 'BBA (82.0%), CAT (94.5%ile), Finance & Marketing preference',
+      icon: 'fa-solid fa-briefcase'
+    }
+  ];
+
+  toggleMockMenu(open?: boolean): void {
+    this.showMockMenu.update((prev) => (open !== undefined ? open : !prev));
+  }
+
+  fillMockProfile(profileId: string): void {
+    this.toggleMockMenu(false);
+
+    // Common personal & guardian details for Archisman Chakraborty
+    const commonPersonal = {
+      fullName: 'Archisman Chakraborty',
+      email: 'carchisman1@gmail.com',
+      phone: '8017741578',
+      alternatePhone: '9830012345',
+      dob: '2005-02-07',
+      gender: 'Male',
+      category: 'General',
+      nationality: 'Indian',
+      address: '27 Sethbagan Place',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      pincode: '700030',
+      parents: {
+        fatherName: 'Dilip Chakraborty',
+        fatherPhone: '9830112233',
+        fatherOccupation: 'Engineer',
+        motherName: 'Sharmila Chakraborty',
+        motherPhone: '9830223344',
+        motherOccupation: 'Educator',
+        guardianName: '',
+        guardianRelation: '',
+        guardianPhone: ''
+      }
+    };
+
+    if (profileId === 'btech-cse') {
+      this.appForm.get('program')!.setValue('B.Tech');
+      this.appForm.get(['streamPrefs', 'pref1'])?.setValue('Computer Science & Engineering');
+      this.appForm.get(['streamPrefs', 'pref2'])?.setValue('Information Technology');
+      this.appForm.get(['streamPrefs', 'pref3'])?.setValue('Electronics & Communication Engineering');
+
+      this.appForm.get('classX')?.patchValue({
+        board: 'ICSE',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        passingYear: 2021,
+        percentage: 92.4
+      });
+      this.appForm.get('classXII')?.patchValue({
+        board: 'ISC',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        stream: 'Science (PCM)',
+        passingYear: 2023,
+        percentage: 91.8,
+        pcmPercentage: 92.5,
+        mathOrComputer: true
+      });
+
+      this.examGroup('WBJEE').get('selected')!.setValue(true);
+      this.examGroup('WBJEE').patchValue({
+        rollNumber: 'WB2023101234',
+        year: 2023,
+        rank: 1420,
+        score: 112
+      });
+
+      this.examGroup('JEE_MAIN').get('selected')!.setValue(true);
+      this.examGroup('JEE_MAIN').patchValue({
+        rollNumber: '230310123456',
+        year: 2023,
+        rank: 15420,
+        score: 215.5
+      });
+    } else if (profileId === 'btech-ece') {
+      this.appForm.get('program')!.setValue('B.Tech');
+      this.appForm.get(['streamPrefs', 'pref1'])?.setValue('Electronics & Communication Engineering');
+      this.appForm.get(['streamPrefs', 'pref2'])?.setValue('Electrical Engineering');
+      this.appForm.get(['streamPrefs', 'pref3'])?.setValue('Mechanical Engineering');
+
+      this.appForm.get('classX')?.patchValue({
+        board: 'CBSE',
+        school: 'Delhi Public School, Ruby Park, Kolkata',
+        passingYear: 2021,
+        percentage: 90.5
+      });
+      this.appForm.get('classXII')?.patchValue({
+        board: 'CBSE',
+        school: 'Delhi Public School, Ruby Park, Kolkata',
+        stream: 'Science (PCM)',
+        passingYear: 2023,
+        percentage: 89.4,
+        pcmPercentage: 88.0,
+        mathOrComputer: true
+      });
+
+      this.examGroup('WBJEE').get('selected')!.setValue(true);
+      this.examGroup('WBJEE').patchValue({
+        rollNumber: 'WB2023987654',
+        year: 2023,
+        rank: 2850,
+        score: 98
+      });
+    } else if (profileId === 'mtech-cse') {
+      this.appForm.get('program')!.setValue('M.Tech');
+      this.appForm.get(['streamPrefs', 'pref1'])?.setValue('Computer Science & Engineering');
+
+      this.appForm.get('classX')?.patchValue({
+        board: 'ICSE',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        passingYear: 2019,
+        percentage: 91.0
+      });
+      this.appForm.get('classXII')?.patchValue({
+        board: 'ISC',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        stream: 'Science (PCM)',
+        passingYear: 2021,
+        percentage: 88.5,
+        pcmPercentage: 89.0,
+        mathOrComputer: true
+      });
+      this.appForm.get('graduation')?.patchValue({
+        degree: 'B.Tech in Computer Science',
+        university: 'Maulana Abul Kalam Azad University of Technology (MAKAUT)',
+        passingYear: 2025,
+        percentage: 84.5
+      });
+
+      this.examGroup('IEMCET').get('selected')!.setValue(true);
+      this.examGroup('IEMCET').patchValue({
+        rollNumber: 'CET20251001',
+        year: 2025,
+        rank: 320,
+        score: 280
+      });
+    } else if (profileId === 'mba') {
+      this.appForm.get('program')!.setValue('MBA');
+      this.appForm.get(['streamPrefs', 'pref1'])?.setValue('Master of Business Administration');
+
+      this.appForm.get('classX')?.patchValue({
+        board: 'ICSE',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        passingYear: 2020,
+        percentage: 89.0
+      });
+      this.appForm.get('classXII')?.patchValue({
+        board: 'ISC',
+        school: "St. Xavier's Collegiate School, Kolkata",
+        stream: 'Commerce',
+        passingYear: 2022,
+        percentage: 87.5,
+        pcmPercentage: null,
+        mathOrComputer: true
+      });
+      this.appForm.get('graduation')?.patchValue({
+        degree: 'Bachelor of Business Administration (BBA)',
+        university: 'University of Calcutta',
+        passingYear: 2025,
+        percentage: 82.0
+      });
+
+      this.examGroup('CAT').get('selected')!.setValue(true);
+      this.examGroup('CAT').patchValue({
+        rollNumber: 'CAT202509123',
+        year: 2025,
+        score: 94.5
+      });
+    }
+
+    this.appForm.patchValue(commonPersonal);
+    this.appForm.get('declaration')?.setValue(true);
+
+    this.syncGraduationSection();
+    this.appForm.updateValueAndValidity();
+
+    // Persist to MongoDB draft immediately
+    this.saveDraft(true);
+
+    this.mockFeedback.set('✨ Auto-filled application data for Archisman Chakraborty! Document uploads remain untouched for your testing.');
+    setTimeout(() => this.mockFeedback.set(null), 8000);
   }
 }
