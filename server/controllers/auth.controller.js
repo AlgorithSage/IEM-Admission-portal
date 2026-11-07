@@ -5,6 +5,22 @@ const User = require('../models/User');
 const { JWT_SECRET } = require('../config/secrets');
 
 // Helper to sign JWT token
+// Registration rules (mirror the client's BVA validator)
+const NAME_RE = /^[a-zA-Z][a-zA-Z\s.'-]{1,59}$/;
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
+
+const registrationError = ({ name, email, password, phone }) => {
+  if (![name, email, password].every((v) => typeof v === 'string') || (phone !== undefined && typeof phone !== 'string')) {
+    return 'Name, email and password are required.';
+  }
+  if (!NAME_RE.test(name.trim())) return 'Name must be 2-60 letters.';
+  if (email.length > 254 || !EMAIL_RE.test(email.trim())) return 'Enter a valid email address.';
+  if (password.length < 6 || password.length > 32) return 'Password must be 6-32 characters.';
+  if (!PHONE_RE.test(String(phone || '').replace(/^(\+91|91)/, '').replace(/[\s-]/g, ''))) return 'Mobile number must be 10 digits starting with 6-9.';
+  return null;
+};
+
 // Sessions last one day; after that the user must log in again (policy, not configuration)
 const SESSION_TTL = '1d';
 
@@ -27,13 +43,11 @@ const generateToken = (user) => {
 const register = async (req, res, next) => {
   try {
     // Public registration always creates applicants; admin accounts are provisioned server-side only
-    const { name, firstName, lastName, email, password, phone, address } = req.body;
+    const { name, firstName, lastName, email, password, phone, address } = req.body || {};
 
-    if ((!name && !firstName) || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, email, and password are required fields.'
-      });
+    const invalid = registrationError({ name: name || [firstName, lastName].filter(Boolean).join(' '), email, password, phone });
+    if (invalid) {
+      return res.status(400).json({ success: false, message: invalid });
     }
 
     const emailNormalized = email.toLowerCase().trim();
@@ -149,9 +163,10 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role } = req.body || {};
 
-    if (!email || !password) {
+    // Strings only: an object here (e.g. {"$ne": ""}) must never reach a database query
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Please provide both email and password.'

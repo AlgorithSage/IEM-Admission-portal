@@ -2,6 +2,7 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { RouterModule } from '@angular/router';
+import { DecisionCardComponent } from '../../../shared/components/decision-card/decision-card.component';
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { applicationOutcome } from '../../../core/utils/outcome.util';
 import { STATUS_LABELS } from '../../../shared/pipes/status-label.pipe';
@@ -21,7 +22,7 @@ interface Step {
 @Component({
   selector: 'app-applicant-dashboard',
   standalone: true,
-  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, RouterModule],
+  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, DecisionCardComponent, RouterModule],
   templateUrl: './applicant-dashboard.component.html',
   styleUrls: ['./applicant-dashboard.component.css']
 })
@@ -30,6 +31,7 @@ export class ApplicantDashboardComponent implements OnInit {
   readonly application = signal<Application | null>(null);
   readonly loading = signal(true);
   readonly steps = signal<Step[]>([]);
+  readonly isDecided = computed(() => ['Selected', 'Rejected'].includes(this.application()?.status || ''));
   readonly outcome = computed(() => applicationOutcome(this.application()));
 
   constructor(

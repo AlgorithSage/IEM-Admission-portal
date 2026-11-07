@@ -26,7 +26,10 @@
     </div>
 
     <!-- Notification: decision and anything that needs the applicant's attention -->
-    <div *ngIf="outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
+    <app-decision-card *ngIf="isDecided() && application() as app" [application]="app" [compact]="true">
+      <a routerLink="/applicant/status" class="btn btn-outline">View full details</a>
+    </app-decision-card>
+    <div *ngIf="!isDecided() && outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
       <i class="fa-solid outcome-icon" [ngClass]="o.icon" aria-hidden="true"></i>
       <div class="outcome-body">
         <strong>{{ o.title }}</strong>

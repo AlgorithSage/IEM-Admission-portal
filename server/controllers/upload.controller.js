@@ -5,6 +5,21 @@ const Draft = require('../models/Draft');
 const storage = require('../services/storage.service');
 const { httpError } = require('../services/workflow.service');
 
+/** True when the file's first bytes match its declared type (a renamed .exe is not a PDF) */
+const contentMatchesType = (filePath, mimeType) => {
+  const head = Buffer.alloc(8);
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    fs.readSync(fd, head, 0, 8, 0);
+  } finally {
+    fs.closeSync(fd);
+  }
+  if (mimeType === 'application/pdf') return head.subarray(0, 5).toString('latin1') === '%PDF-';
+  if (mimeType === 'image/png') return head.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+  return false;
+};
+
 const view = (u) => ({ uploadId: u._id, originalName: u.originalName, mimeType: u.mimeType, size: u.size });
 
 // @desc    Which upload path the client must use
@@ -23,6 +38,14 @@ const uploadLocal = async (req, res, next) => {
       throw httpError(400, 'Direct uploads are not enabled. Upload to blob storage instead.');
     }
     if (!req.file) throw httpError(400, 'Attach a file.');
+    if (req.file.size > storage.MAX_BYTES) {
+      fs.unlink(req.file.path, () => {});
+      throw httpError(400, 'File size exceeds the maximum allowed limit of 5MB.');
+    }
+    if (req.file.size === 0 || !contentMatchesType(req.file.path, req.file.mimetype)) {
+      fs.unlink(req.file.path, () => {});
+      throw httpError(400, 'The file is empty or is not a real PDF, JPG or PNG.');
+    }
     const upload = await Upload.create({
       owner: String(req.user.id),
       storage: 'local',

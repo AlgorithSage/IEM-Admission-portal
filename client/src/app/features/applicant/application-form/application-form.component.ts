@@ -792,15 +792,15 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
     return this.uploadState()[field];
   }
 
-  /** Opens a document: the local file if chosen in this visit, otherwise the uploaded copy */
+  /** Opens a document: the local file immediately if present, otherwise fetches from server cache */
   viewDoc(field: UploadField): void {
-    const f = this.docFor(field);
-    if (!f || f.status !== 'done' || !f.uploadId || this.saveState() === 'saving' || this.viewingDoc() === field) {
-      return;
-    }
     const local = this.files[field];
     if (local) {
       this.previewFile(local);
+      return;
+    }
+    const f = this.docFor(field);
+    if (!f || f.status !== 'done' || !f.uploadId || this.viewingDoc() === field) {
       return;
     }
     this.viewingDoc.set(field);
@@ -821,6 +821,10 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
 
   uploadStatus(field: UploadField): UploadState['status'] | undefined {
     return this.uploadState()[field]?.status;
+  }
+
+  hasLocalFile(field: any): boolean {
+    return !!this.files[field as UploadField];
   }
 
   private setUploadState(field: UploadField, state: UploadState | undefined): void {

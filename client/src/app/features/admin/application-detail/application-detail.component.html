@@ -66,12 +66,17 @@
             <p *ngIf="targetStatus === 'Selected' && pendingOrRejectedDocs > 0" class="text-red small">
               {{ pendingOrRejectedDocs }} document(s) are not approved yet. Approve every document before approving the application.
             </p>
-            <p *ngIf="targetStatus === 'Correction Requested'" class="muted small">Reject the documents that need to be uploaded again first. The applicant will be emailed.</p>
+            <p *ngIf="targetStatus === 'Correction Requested' && docCount('Rejected') === 0" class="text-red small">
+              <i class="fa-solid fa-triangle-exclamation"></i> Reject at least one document below (with a reason) before requesting corrections.
+            </p>
+            <p *ngIf="targetStatus === 'Correction Requested' && docCount('Rejected') > 0" class="text-green small">
+              <i class="fa-solid fa-check"></i> {{ docCount('Rejected') }} document(s) marked as rejected. The applicant will be notified to replace them.
+            </p>
             <label class="form-label" for="remarks">Message to applicant <span *ngIf="remarksRequired" class="required">*</span></label>
             <textarea id="remarks" class="form-control" rows="2" [(ngModel)]="remarks" [placeholder]="remarksRequired ? 'Required' : 'Optional'"></textarea>
             <div class="actions">
               <button type="button" class="btn btn-outline" (click)="targetStatus = ''; remarks = ''">Cancel</button>
-              <button type="button" class="btn solid" [ngClass]="'decision-' + decisionTone(targetStatus)" (click)="applyStatus()" [disabled]="busy() === 'status'">
+              <button type="button" class="btn solid" [ngClass]="'decision-' + decisionTone(targetStatus)" (click)="applyStatus()" [disabled]="busy() === 'status' || (targetStatus === 'Correction Requested' && docCount('Rejected') === 0) || (targetStatus === 'Selected' && pendingOrRejectedDocs > 0)">
                 {{ busy() === 'status' ? 'Saving...' : 'Confirm: ' + decisionLabel(targetStatus) }}
               </button>
             </div>
@@ -110,7 +115,9 @@
                     {{ d.verification.status === 'Verified' ? 'Approved' : 'Approve' }}
                   </button>
                   <button *ngIf="d.available === false" class="btn btn-sm decision-reject" (click)="askReupload(d)" [disabled]="busy() === d.key || d.verification.status === 'Rejected'">Ask to re-upload</button>
-                  <button *ngIf="d.available !== false" class="btn btn-sm decision-reject" (click)="startReject(d)" [disabled]="busy() === d.key">Reject</button>
+                  <button *ngIf="d.available !== false" class="btn btn-sm decision-reject" (click)="startReject(d)" [disabled]="busy() === d.key">
+                    {{ d.verification.status === 'Rejected' ? 'Rejected (edit)' : 'Reject' }}
+                  </button>
                 </ng-container>
                 <div *ngIf="rejectingKey() === d.key" class="reject-box">
                   <input class="form-control" [(ngModel)]="rejectReason[d.key]" placeholder="Reason (shown to applicant)" aria-label="Reject reason">

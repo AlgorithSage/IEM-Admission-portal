@@ -2,6 +2,7 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { RouterModule } from '@angular/router';
+import { DecisionCardComponent } from '../../../shared/components/decision-card/decision-card.component';
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { applicationOutcome } from '../../../core/utils/outcome.util';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -15,7 +16,7 @@ import { apiError, downloadBlob, errorMessage, openBlobInNewTab } from '../../..
 @Component({
   selector: 'app-status-tracker',
   standalone: true,
-  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, RouterModule],
+  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, DecisionCardComponent, RouterModule],
   templateUrl: './status-tracker.component.html',
   styleUrls: ['./status-tracker.component.css']
 })
@@ -28,6 +29,7 @@ export class StatusTrackerComponent implements OnInit {
   readonly busyKey = signal('');
   readonly viewingKey = signal<string | null>(null);
   readonly resubmitting = signal(false);
+  readonly isDecided = computed(() => ['Selected', 'Rejected'].includes(this.application()?.status || ''));
   readonly outcome = computed(() => applicationOutcome(this.application()));
 
   constructor(

@@ -1,0 +1,78 @@
+<!-- Projected once, shown in whichever decision is rendered -->
+<ng-template #extra><ng-content /></ng-template>
+
+@if (approved()) {
+  <section class="decision approved" role="status" aria-live="polite">
+    <canvas #confetti class="confetti" aria-hidden="true"></canvas>
+    <div class="medal" aria-hidden="true"><i class="fa-solid fa-award"></i></div>
+    <p class="eyebrow">Admission decision</p>
+    <h2>Congratulations, {{ firstName() }}!</h2>
+    <p class="lead">Your application to <strong>{{ application().program || application().department }}</strong> at IEM has been <span class="word">approved</span>.</p>
+
+    <dl class="facts">
+      <div><dt>Application ID</dt><dd>{{ application().applicationId }}</dd></div>
+      @if (application().streamPreferences?.length) {
+        <div><dt>Stream</dt><dd>{{ application().streamPreferences![0] }}</dd></div>
+      }
+      @if (decidedAt()) {
+        <div><dt>Approved on</dt><dd>{{ decidedAt() | date: 'dd MMM yyyy' }}</dd></div>
+      }
+    </dl>
+
+    @if (remarks()) {
+      <blockquote class="note"><span>Message from the admission office</span>{{ remarks() }}</blockquote>
+    }
+
+    @if (!compact()) {
+      <div class="next">
+        <h3>What happens next</h3>
+        <ol>
+          <li>Download your admission slip and keep a printed copy.</li>
+          <li>Watch your email ({{ application().email }}) for counselling and fee payment dates.</li>
+          <li>Bring your original Class X, Class XII and entrance exam documents for verification.</li>
+        </ol>
+      </div>
+    }
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" (click)="downloadSlip()" [disabled]="downloading()">
+        <i class="fa-solid fa-download"></i> {{ downloading() ? 'Downloading...' : 'Download Admission Slip' }}
+      </button>
+      <ng-container [ngTemplateOutlet]="extra" />
+      <button type="button" class="btn btn-ghost" (click)="replay()" aria-label="Celebrate again"><i class="fa-solid fa-champagne-glasses"></i></button>
+    </div>
+    @if (error()) {
+      <p class="err" role="alert">{{ error() }}</p>
+    }
+  </section>
+} @else {
+  <section class="decision rejected" role="status">
+    <div class="medal" aria-hidden="true"><i class="fa-solid fa-envelope-open-text"></i></div>
+    <p class="eyebrow">Admission decision</p>
+    <h2>Your application was not approved</h2>
+    <p class="lead">Dear {{ firstName() }}, thank you for applying to <strong>{{ application().program || application().department }}</strong> at IEM. After careful review, the admission office was unable to approve your application this time.</p>
+
+    <dl class="facts">
+      <div><dt>Application ID</dt><dd>{{ application().applicationId }}</dd></div>
+      @if (decidedAt()) {
+        <div><dt>Decided on</dt><dd>{{ decidedAt() | date: 'dd MMM yyyy' }}</dd></div>
+      }
+    </dl>
+
+    <blockquote class="note">
+      <span>Reason</span>{{ remarks() || 'No reason was given. Contact the admission office for details.' }}
+    </blockquote>
+
+    @if (!compact()) {
+      <div class="next">
+        <h3>What you can do</h3>
+        <ul>
+          <li>Contact the admission office with your Application ID if you think this is a mistake.</li>
+          <li>Look at other IEM programs whose eligibility you meet.</li>
+          <li>Keep your Application ID for any future correspondence.</li>
+        </ul>
+      </div>
+    }
+    <div class="actions"><ng-container [ngTemplateOutlet]="extra" /></div>
+  </section>
+}

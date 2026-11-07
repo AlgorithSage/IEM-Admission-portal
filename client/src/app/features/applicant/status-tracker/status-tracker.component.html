@@ -26,7 +26,8 @@
 
     <ng-container *ngIf="application() as app">
       <!-- Outcome: decision and anything that needs attention -->
-      <div *ngIf="outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
+      <app-decision-card *ngIf="isDecided()" [application]="app" />
+      <div *ngIf="!isDecided() && outcome() as o" class="outcome" [ngClass]="'outcome-' + o.tone" role="status">
       <i class="fa-solid outcome-icon" [ngClass]="o.icon" aria-hidden="true"></i>
       <div class="outcome-body">
         <strong>{{ o.title }}</strong>
@@ -42,6 +43,7 @@
       <div class="card box">
         <table class="plain-table">
           <tr><th>Status</th><td><span class="status-pill" [ngClass]="'status-' + app.status.toLowerCase().replace(' ', '-')">{{ app.status | statusLabel }}</span></td></tr>
+          <tr *ngIf="app.adminRemarks && !isDecided()"><th>Admission Remarks</th><td><strong>{{ app.adminRemarks }}</strong></td></tr>
           <tr *ngIf="app.submittedAt"><th>Submitted On</th><td>{{ app.submittedAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
         </table>
 

@@ -140,7 +140,7 @@
             type="button"
             class="link-btn"
             (click)="viewDoc(field)"
-            [disabled]="f.status !== 'done' || !f.uploadId || saveState() === 'saving' || viewingDoc() === field"
+            [disabled]="(!hasLocalFile(field) && (f.status !== 'done' || !f.uploadId)) || viewingDoc() === field"
             [attr.aria-label]="'View ' + title"
           >
             <span *ngIf="viewingDoc() === field"><i class="fa-solid fa-spinner fa-spin"></i> </span>View
@@ -660,7 +660,9 @@
 
     <!-- Final review before submission -->
     <div *ngIf="isStep('review')" class="form-card card review">
-      <h2 class="section-title">{{ stepNumber('review') }}. Review &amp; Submit</h2>
+      <div class="section-title-wrap">
+        <h2 class="section-title">{{ stepNumber('review') }}. Review &amp; Submit</h2>
+      </div>
       <p class="section-intro">Check every detail and document. Use <strong>Edit</strong> to change a section. You cannot edit after submitting.</p>
 
       <h4 class="subsection-title review-head">Program &amp; Stream <button type="button" class="link-btn" (click)="goTo('program')">Edit</button></h4>
@@ -713,7 +715,7 @@
                 type="button"
                 class="link-btn"
                 (click)="viewDoc(d.field)"
-                [disabled]="doc.status !== 'done' || !doc.uploadId || saveState() === 'saving' || viewingDoc() === d.field"
+                [disabled]="(!hasLocalFile(d.field) && (doc.status !== 'done' || !doc.uploadId)) || viewingDoc() === d.field"
               >
                 <span *ngIf="viewingDoc() === d.field"><i class="fa-solid fa-spinner fa-spin"></i> </span>View
               </button>

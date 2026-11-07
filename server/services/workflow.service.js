@@ -43,17 +43,32 @@ const STATUS_MESSAGES = {
   Rejected: 'We regret to inform you that your application has not been accepted.'
 };
 
-const notifyStatusChange = (app, remarks) =>
-  sendEmail({
+const notifyStatusChange = (app, remarks) => {
+  const rejectedDocs = documentSlots(app)
+    .filter((d) => d.get().verification?.status === 'Rejected')
+    .map((d) => {
+      const rem = d.get().verification?.remarks;
+      return `• ${d.label}${rem ? `: ${rem}` : ''}`;
+    });
+
+  let messageText =
+    `Dear ${app.fullName},\n\n${STATUS_MESSAGES[app.status] || `Your application status is now ${statusLabel(app.status)}.`}\n` +
+    (remarks ? `\nRemarks from Admission Committee:\n${remarks}\n` : '');
+
+  if (rejectedDocs.length > 0) {
+    messageText += `\nDocuments requiring attention / re-upload:\n${rejectedDocs.join('\n')}\n`;
+  }
+
+  messageText += `\nApplication ID: ${app.applicationId || '-'}\n\nPlease log in to the IEM Admission Portal to view details or re-upload:\nhttps://iem-admission-portal.vercel.app/applicant/status\n\nBest regards,\nIEM Admissions`;
+
+  return sendEmail({
     application: app,
     type: 'STATUS_UPDATE',
     to: app.email,
     subject: `Application ${app.applicationId || ''}: ${statusLabel(app.status)}`,
-    text:
-      `Dear ${app.fullName},\n\n${STATUS_MESSAGES[app.status] || `Your application status is now ${statusLabel(app.status)}.`}\n` +
-      (remarks ? `\nRemarks: ${remarks}\n` : '') +
-      `\nApplication ID: ${app.applicationId || '-'}\n\nIEM Admissions`
+    text: messageText
   });
+};
 
 /**
  * Moves an application to a new status, enforcing the state machine and business guards.
