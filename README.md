@@ -4,13 +4,6 @@ A scoped, modular Proof-of-Concept (POC) of an online college admission system b
 
 ---
 
-## 🏛️ Project Showcase & Visual Design
-The frontend faithfully implements the official IEM institutional visual aesthetic based on [`landing page.png`](file:///c:/Users/archi/OneDrive/Desktop/IEM%20ADMISSION%20PORTAL/landing%20page.png):
-* **Brand Colors**: IEM Gold (`#F59E0B`), Charcoal/Dark Slate (`#18181B`), Warm Cream Canvas (`#FEFDF6`), and Soft Tinted Feature Cards.
-* **Layout**: Hero Section (*"Your Future Begins Here"*), 4 Feature Highlights, Popular Programs (*B.Tech, M.Tech, MBA, MCA, BBA*), Pathway Selector Modal, Applicant Dashboard, Admission Form, Status Tracker, and Admin Scrutiny Panel.
-
----
-
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
