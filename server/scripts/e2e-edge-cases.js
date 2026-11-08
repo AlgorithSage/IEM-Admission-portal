@@ -302,6 +302,37 @@ const exam = (b, code) => b.competitiveExams.find((x) => x.exam === code);
     bad('declaration not accepted', (b) => (b.declaration = false), /declaration/);
     bad('no program', (b) => (b.program = ''), /program/);
 
+    // ---------------- Fee table (tallied against the official IEM fee list) ----------------
+    console.log('\nFee table');
+    const { feeFor } = require('../config/admission.rules');
+    const FEES = [
+      // program, stream, Class XII year, payable now, 1st sem, later sem, total
+      ['B.Tech', 'Computer Science & Engineering', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'CSE (Artificial Intelligence)', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'CSE (Artificial Intelligence & Machine Learning)', 2026, 50000, 140000, 115000, 945000],
+      ['B.Tech', 'CSE (Artificial Intelligence & Machine Learning)', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'Information Technology', 2026, 50000, 140000, 115000, 945000],
+      ['B.Tech', 'CSE (Data Science)', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'Electronics & Communication Engineering', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'Electrical Engineering', 2026, 50000, 140000, 115000, 945000],
+      ['B.Tech', 'Mechanical Engineering', 2025, 140000, 140000, 115000, 945000],
+      ['B.Tech', 'Biotechnology', 2025, 140000, 140000, 115000, 945000],
+      ['M.Tech', 'Computer Science & Engineering', 2020, 77000, 77000, 75000, 302000],
+      ['M.Tech', 'Electronics & Communication Engineering', 2020, 77000, 77000, 75000, 302000],
+      ['MBA', 'MBA (Full Time)', 2020, 162000, 175000, 175000, 700000],
+      ['MBA (General Management)', 'General Management', 2020, 162000, 175000, 175000, 700000],
+      ['Management', 'BBA', 2025, 50000, 70000, 60000, 490000],
+      ['Management', 'BBA LLB (Law)', 2025, 60000, 60000, 50000, 510000],
+      ['Hotel Management', 'BHM (Hotel Management)', 2025, 60000, 60000, 50000, 410000],
+      ['Computer Application', 'BCA', 2025, 50000, 70000, 60000, 490000],
+      ['Computer Application', 'MCA', 2020, 75000, 75000, 75000, 300000]
+    ];
+    for (const [program, stream, xii, now, first, later, total] of FEES) {
+      const f = feeFor({ program, streamPreferences: [stream], classXII: { passingYear: xii } });
+      check(`${program} / ${stream} (XII ${xii}): pay Rs. ${now.toLocaleString('en-IN')}`, f && f.amount === now && f.firstSemester === first && f.laterSemester === later && f.total === total, JSON.stringify(f));
+    }
+    check('unknown stream has no fee (payment refused, not guessed)', feeFor({ program: 'B.Tech', streamPreferences: ['Astrology'] }) === null);
+
     // ---------------- Submission over HTTP ----------------
     console.log('\nSubmission');
     const docsA = await uploadAll(tokenA);
@@ -324,7 +355,7 @@ const exam = (b, code) => b.competitiveExams.find((x) => x.exam === code);
     const tokenB = (await register(emailB)).data.token;
     check('order without an application -> 4xx', [400, 404].includes((await api('POST', '/payments/order', { token: tokenB })).status));
     const order = (await api('POST', '/payments/order', { token: tokenA })).data.order;
-    check('fee is exactly Rs. 1,000 (100000 paise), set by the server', order.amount === 100000);
+    check('fee is set by the server from the fee table: Rs. 1,40,000 (1st sem, B.Tech CSE)', order.amount === 14000000);
     check("another user cannot pay this order", (await api('POST', '/payments/mock-checkout', { token: tokenB, json: { orderId: order.orderId, method: 'UPI', outcome: 'success' } })).status >= 400);
     const paid = (await api('POST', '/payments/mock-checkout', { token: tokenA, json: { orderId: order.orderId, method: 'UPI', outcome: 'success' } })).data;
     check("another user cannot verify this payment", (await api('POST', '/payments/verify', { token: tokenB, json: { ...paid, method: 'UPI' } })).status >= 400);

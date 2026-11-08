@@ -40,6 +40,7 @@ const paymentSummarySchema = new mongoose.Schema(
     orderId: { type: String, default: '' },
     paymentId: { type: String, default: '' },
     method: { type: String, default: '' },
+    description: { type: String, default: '' },
     paidAt: { type: Date }
   },
   { _id: false }

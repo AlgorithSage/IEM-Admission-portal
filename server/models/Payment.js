@@ -11,6 +11,8 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true }, // in paise
     currency: { type: String, default: 'INR' },
     receipt: { type: String, required: true },
+    // What the amount is for, fixed when the order is created (e.g. 'Booking amount - B.Tech / Information Technology')
+    description: { type: String, default: '' },
     status: { type: String, enum: ['created', 'paid', 'failed'], default: 'created', index: true },
     paymentId: { type: String, default: '' },
     method: { type: String, default: '' },

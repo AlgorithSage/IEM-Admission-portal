@@ -1,6 +1,6 @@
 const Payment = require('../models/Payment');
 const { audit } = require('../models/AuditLog');
-const { APPLICATION_FEE } = require('../config/admission.rules');
+const { feeFor } = require('../config/admission.rules');
 const gateway = require('../services/paymentGateway.service');
 const { findApplicationForUser, completePayment, httpError } = require('../services/workflow.service');
 const { serializeApplication } = require('../services/presenter');
@@ -13,6 +13,20 @@ const loadPayable = async (user) => {
   return app;
 };
 
+// @desc    The fee this applicant pays, with its breakdown (shown before paying)
+// @route   GET /api/payments/fee
+// @access  Private (Applicant)
+const getFee = async (req, res, next) => {
+  try {
+    const app = await loadPayable(req.user);
+    const fee = feeFor(app);
+    if (!fee) throw httpError(400, 'No fee is defined for the chosen program and stream. Contact the admission office.');
+    res.status(200).json({ success: true, fee });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create (or reuse) a gateway order for the application fee
 // @route   POST /api/payments/order
 // @access  Private (Applicant)
@@ -23,10 +37,14 @@ const createOrder = async (req, res, next) => {
       return res.status(409).json({ success: false, message: 'The application fee has already been paid.', application: serializeApplication(app) });
     }
 
-    // Reuse an open order so retries do not pile up orders
-    let order = await Payment.findOne({ application: app._id, status: { $in: ['created', 'failed'] } }).sort({ createdAt: -1 });
+    const fee = feeFor(app);
+    if (!fee) throw httpError(400, 'No fee is defined for the chosen program and stream. Contact the admission office.');
+    const amountPaise = fee.amount * 100;
+
+    // Reuse an open order for the same amount so retries do not pile up orders
+    let order = await Payment.findOne({ application: app._id, status: { $in: ['created', 'failed'] }, amount: amountPaise }).sort({ createdAt: -1 });
     if (!order) {
-      const gwOrder = await gateway.createOrder({ amountPaise: APPLICATION_FEE * 100, receipt: `app_${app._id}` });
+      const gwOrder = await gateway.createOrder({ amountPaise, receipt: `app_${app._id}` });
       order = await Payment.create({
         application: app._id,
         applicant: req.user.id,
@@ -34,13 +52,15 @@ const createOrder = async (req, res, next) => {
         orderId: gwOrder.id,
         amount: gwOrder.amount,
         currency: gwOrder.currency,
-        receipt: gwOrder.receipt
+        receipt: gwOrder.receipt,
+        description: `${fee.basis} - ${fee.program} / ${fee.stream}`
       });
     }
 
     res.status(200).json({
       success: true,
       order: { orderId: order.orderId, amount: order.amount, currency: order.currency, keyId: gateway.KEY_ID, mode: gateway.MODE },
+      fee,
       methods: PAYMENT_METHODS,
       applicant: { name: app.fullName, email: app.email, contact: app.phone }
     });
@@ -111,4 +131,4 @@ const verifyPayment = async (req, res, next) => {
   }
 };
 
-module.exports = { createOrder, mockCheckout, verifyPayment };
+module.exports = { getFee, createOrder, mockCheckout, verifyPayment };

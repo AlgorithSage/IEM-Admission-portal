@@ -10,7 +10,8 @@ import {
   ApplicationListItem,
   ApplicationStatus,
   CheckoutResult,
-  PaymentOrder
+  PaymentOrder,
+  FeeQuote
 } from '../../models/application.model';
 import { environment } from '../../../environments/environment';
 
@@ -24,6 +25,7 @@ interface AppResponse {
 export interface PaymentEmails {
   applicationId: boolean;
   admissionSlip: boolean;
+  paymentReceipt?: boolean;
 }
 
 /** A document attached to a saved draft (already uploaded, not yet submitted) */
@@ -96,6 +98,10 @@ export class ApplicationService {
 
   // ---------- Payment (Razorpay-compatible, mock checkout in test mode) ----------
 
+  getFee(): Observable<{ success: boolean; fee: FeeQuote }> {
+    return this.http.get<{ success: boolean; fee: FeeQuote }>(`${this.api}/payments/fee`);
+  }
+
   createPaymentOrder(): Observable<{ success: boolean; order: PaymentOrder; methods: string[] }> {
     return this.http.post<{ success: boolean; order: PaymentOrder; methods: string[] }>(`${this.api}/payments/order`, {});
   }
@@ -124,6 +130,10 @@ export class ApplicationService {
     return this.http
       .get(`${this.api}/applications/${appId}/documents/${encodeURIComponent(docKey)}`, { responseType: 'blob' })
       .pipe(tap((b) => this.docCache.set(cacheKey, b)));
+  }
+
+  getReceipt(appId: string): Observable<Blob> {
+    return this.http.get(`${this.api}/applications/${appId}/receipt`, { responseType: 'blob' });
   }
 
   getSlip(appId: string): Observable<Blob> {

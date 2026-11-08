@@ -101,7 +101,9 @@
       <div class="card box" *ngIf="app.payment?.status === 'Paid'">
         <h3>Payment</h3>
         <table class="plain-table">
-          <tr><th>Amount</th><td>Rs. {{ app.payment?.amount | number }}</td></tr>
+          <tr><th>Amount</th><td>{{ app.payment?.amount | inr }}</td></tr>
+          <tr *ngIf="app.payment?.description"><th>Paid For</th><td>{{ app.payment?.description }}</td></tr>
+          <tr><th>Receipt</th><td><button class="link-btn" (click)="downloadReceipt()" [disabled]="busyKey() === 'receipt'">{{ busyKey() === 'receipt' ? 'Downloading...' : 'Download receipt (PDF)' }}</button></td></tr>
           <tr><th>Payment ID</th><td>{{ app.payment?.paymentId }}</td></tr>
           <tr><th>Method</th><td>{{ app.payment?.method }}</td></tr>
           <tr><th>Paid On</th><td>{{ app.payment?.paidAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>

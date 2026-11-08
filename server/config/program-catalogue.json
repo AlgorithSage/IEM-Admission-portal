@@ -1,6 +1,5 @@
 {
   "admissionYear": 2026,
-  "applicationFee": 1000,
   "pcmStreams": [
     "Science (PCM)",
     "Science (PCMB)"
@@ -170,7 +169,9 @@
             "firstSemester": 140000,
             "laterSemester": 115000,
             "total": 945000,
-            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)",
+            "bookingAppearing": 50000,
+            "bookingPassOut": 140000
           }
         },
         {
@@ -187,7 +188,9 @@
             "firstSemester": 140000,
             "laterSemester": 115000,
             "total": 945000,
-            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)",
+            "bookingAppearing": 50000,
+            "bookingPassOut": 140000
           }
         },
         {
@@ -300,7 +303,9 @@
             "firstSemester": 140000,
             "laterSemester": 115000,
             "total": 945000,
-            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)",
+            "bookingAppearing": 50000,
+            "bookingPassOut": 140000
           }
         },
         {
@@ -317,7 +322,9 @@
             "firstSemester": 140000,
             "laterSemester": 115000,
             "total": 945000,
-            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)",
+            "bookingAppearing": 50000,
+            "bookingPassOut": 140000
           }
         },
         {
@@ -334,7 +341,9 @@
             "firstSemester": 140000,
             "laterSemester": 115000,
             "total": 945000,
-            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)"
+            "booking": "Rs. 50,000 (Class XII appearing) / Rs. 1,40,000 (pass-out)",
+            "bookingAppearing": 50000,
+            "bookingPassOut": 140000
           }
         }
       ],
@@ -362,7 +371,8 @@
             "firstSemester": 77000,
             "laterSemester": 75000,
             "total": 302000,
-            "booking": "Rs. 77,000"
+            "booking": "Rs. 77,000",
+            "bookingAmount": 77000
           }
         },
         {
@@ -379,7 +389,8 @@
             "firstSemester": 77000,
             "laterSemester": 75000,
             "total": 302000,
-            "booking": "Rs. 77,000"
+            "booking": "Rs. 77,000",
+            "bookingAmount": 77000
           }
         },
         {
@@ -396,7 +407,8 @@
             "firstSemester": 77000,
             "laterSemester": 75000,
             "total": 302000,
-            "booking": "Rs. 77,000"
+            "booking": "Rs. 77,000",
+            "bookingAmount": 77000
           }
         }
       ],
@@ -422,7 +434,8 @@
             "firstSemester": 175000,
             "laterSemester": 175000,
             "total": 700000,
-            "booking": "Rs. 1,62,000"
+            "booking": "Rs. 1,62,000",
+            "bookingAmount": 162000
           }
         }
       ],
@@ -449,7 +462,8 @@
             "firstSemester": 175000,
             "laterSemester": 175000,
             "total": 700000,
-            "booking": "Rs. 1,62,000"
+            "booking": "Rs. 1,62,000",
+            "bookingAmount": 162000
           }
         }
       ],
@@ -476,7 +490,8 @@
             "firstSemester": 70000,
             "laterSemester": 60000,
             "total": 490000,
-            "booking": "Rs. 50,000"
+            "booking": "Rs. 50,000",
+            "bookingAmount": 50000
           }
         },
         {
@@ -542,7 +557,8 @@
             "firstSemester": 70000,
             "laterSemester": 60000,
             "total": 490000,
-            "booking": "Rs. 50,000"
+            "booking": "Rs. 50,000",
+            "bookingAmount": 50000
           }
         },
         {

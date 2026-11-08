@@ -35,6 +35,7 @@
         </div>
         <p *ngIf="a.adminRemarks"><strong>Latest remarks:</strong> {{ a.adminRemarks }}</p>
         <div class="actions" *ngIf="a.applicationId">
+          <button class="btn btn-outline btn-sm" (click)="downloadReceipt()" [disabled]="busy() === 'receipt'">Payment Receipt</button>
           <button class="btn btn-outline btn-sm" (click)="downloadSlip()" [disabled]="busy() === 'slip'">Admission Slip</button>
         </div>
       </div>
@@ -163,7 +164,7 @@
             <tr *ngFor="let p of detail()?.payments">
               <td>{{ p.orderId }}</td>
               <td>{{ p.status }}<br *ngIf="p.failureReason"><small *ngIf="p.failureReason" class="muted">{{ p.failureReason }}</small></td>
-              <td>Rs. {{ p.amount / 100 | number }}</td>
+              <td>{{ p.amount | inr:'paise' }}</td>
               <td>{{ p.paymentId || '-' }}</td>
               <td>{{ p.method || '-' }}</td>
               <td>{{ (p.paidAt || p.createdAt) | date:'dd MMM yyyy, h:mm a' }}</td>

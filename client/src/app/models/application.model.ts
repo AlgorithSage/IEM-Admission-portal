@@ -89,6 +89,8 @@ export interface PaymentSummary {
   orderId: string;
   paymentId: string;
   method: string;
+  /** What the amount was for, e.g. 'Booking amount - B.Tech / Information Technology' */
+  description?: string;
   paidAt?: string;
 }
 
@@ -205,6 +207,17 @@ export interface ApplicationDetail {
   payments: PaymentRecord[];
   notifications: NotificationRecord[];
   auditLog: AuditEntry[];
+}
+
+/** What the applicant pays and why (from the fee table for their first-preference stream) */
+export interface FeeQuote {
+  amount: number; // rupees
+  basis: string;
+  program: string;
+  stream: string;
+  firstSemester: number;
+  laterSemester: number;
+  total: number;
 }
 
 export interface PaymentOrder {

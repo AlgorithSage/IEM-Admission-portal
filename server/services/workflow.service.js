@@ -6,7 +6,7 @@ const { ADMISSION_YEAR } = require('../config/admission.rules');
 const { ADMIN_TRANSITIONS, SYSTEM_TRANSITIONS, REMARKS_REQUIRED, DEFAULT_REMARKS, statusLabel } = require('../config/status.rules');
 const { documentSlots } = require('./documents.service');
 const { sendEmail, EMAIL_ENABLED } = require('./notification.service');
-const { generateAdmissionSlip } = require('./slip.service');
+const { generateAdmissionSlip, generatePaymentReceipt, receiptNumber } = require('./slip.service');
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
 
@@ -143,9 +143,36 @@ const sendSubmissionEmails = async (app) => {
     text: `Dear ${app.fullName},\n\nPlease find your admission slip attached. Keep it for document verification.\n\nIEM Admissions`,
     attachments: pdf ? [{ filename: `Admission-Slip-${app.applicationId}.pdf`, content: pdf, contentType: 'application/pdf' }] : []
   });
+  let receipt;
+  try {
+    receipt = await generatePaymentReceipt(app);
+  } catch (err) {
+    console.error('[Receipt] Generation failed:', err.message);
+  }
+  const receiptMail = await sendEmail({
+    application: app,
+    type: 'PAYMENT_RECEIPT',
+    to: app.email,
+    subject: `Payment Receipt ${receiptNumber(app)} - Rs. ${Number(app.payment.amount).toLocaleString('en-IN')}`,
+    text:
+      `Dear ${app.fullName},
+
+We have received your payment of Rs. ${Number(app.payment.amount).toLocaleString('en-IN')}` +
+      `${app.payment.description ? ` (${app.payment.description})` : ''}.
+
+Receipt No.: ${receiptNumber(app)}
+` +
+      `Payment ID: ${app.payment.paymentId}
+
+The receipt is attached.
+
+IEM Admissions`,
+    attachments: receipt ? [{ filename: `Payment-Receipt-${app.applicationId}.pdf`, content: receipt, contentType: 'application/pdf' }] : []
+  });
   return {
     applicationId: EMAIL_ENABLED && idMail.delivered,
-    admissionSlip: EMAIL_ENABLED && slipMail.delivered && !!pdf
+    admissionSlip: EMAIL_ENABLED && slipMail.delivered && !!pdf,
+    paymentReceipt: EMAIL_ENABLED && receiptMail.delivered && !!receipt
   };
 };
 
@@ -172,7 +199,7 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
         applicationId,
         submittedAt: now,
         adminRemarks: DEFAULT_REMARKS.Submitted,
-        payment: { status: 'Paid', amount: paid.amount / 100, currency: paid.currency, orderId: paid.orderId, paymentId, method, paidAt: now }
+        payment: { status: 'Paid', amount: paid.amount / 100, currency: paid.currency, orderId: paid.orderId, paymentId, method, description: paid.description || '', paidAt: now }
       },
       $push: { statusHistory: { fromStatus: 'Payment Pending', toStatus: 'Submitted', changedAt: now, changedBy: 'system', remarks: `Fee paid (${paymentId})` } },
       $inc: { __v: 1 }
@@ -189,7 +216,7 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
     return { application: current, alreadyProcessed: true };
   }
 
-  await audit({ application: app._id, actorId, actorRole: 'applicant', action: 'PAYMENT_SUCCESS', details: `${paymentId} via ${method}, Rs. ${paid.amount / 100}` });
+  await audit({ application: app._id, actorId, actorRole: 'applicant', action: 'PAYMENT_SUCCESS', details: `${paymentId} via ${method}, Rs. ${(paid.amount / 100).toLocaleString('en-IN')}` });
   await audit({ application: app._id, actorRole: 'system', action: 'STATUS_CHANGED', fromStatus: 'Payment Pending', toStatus: 'Submitted', details: `Application ID ${applicationId} issued` });
   const emails = await sendSubmissionEmails(updated);
   return { application: updated, alreadyProcessed: false, emails };

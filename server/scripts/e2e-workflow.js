@@ -236,8 +236,12 @@ const register = async (email, extra = {}) =>
 
     // ---------------- Payment ----------------
     console.log('\nPayment (Razorpay mock)');
+    // B.Tech, 1st preference Computer Science & Engineering (no booking amount), Class XII 2025 -> 1st semester fee
+    const FEE = 140000;
+    const quote = await api('GET', '/payments/fee', { token: tokenA });
+    check('fee quote: Rs. 1,40,000, 1st semester fee for B.Tech / CSE', quote.status === 200 && quote.data.fee.amount === FEE && quote.data.fee.basis === '1st semester fee' && quote.data.fee.stream === 'Computer Science & Engineering' && quote.data.fee.total === 945000, JSON.stringify(quote.data));
     const order = await api('POST', '/payments/order', { token: tokenA });
-    check('order created for Rs. 1,000', order.status === 200 && order.data.order.amount === 100000, JSON.stringify(order.data));
+    check('order amount = fee quote exactly (in paise)', order.status === 200 && order.data.order.amount === FEE * 100 && order.data.fee.amount === FEE, JSON.stringify(order.data));
     const orderId = order.data.order.orderId;
     const fail = await api('POST', '/payments/mock-checkout', { token: tokenA, json: { orderId, method: 'UPI', outcome: 'failure' } });
     check('declined payment -> 402', fail.status === 402);
@@ -252,9 +256,11 @@ const register = async (email, extra = {}) =>
     const paidApp = verify.data.application || {};
     check('verified payment -> Submitted', verify.status === 200 && paidApp.status === 'Submitted', JSON.stringify(verify.data).slice(0, 300));
     const mailFlags = verify.data.emails || {};
-    check('payment response reports email delivery', process.env.E2E_USE_SMTP ? mailFlags.applicationId === true && mailFlags.admissionSlip === true : mailFlags.applicationId === false && mailFlags.admissionSlip === false, JSON.stringify(verify.data.emails));
+    check('payment response reports email delivery', process.env.E2E_USE_SMTP ? mailFlags.applicationId === true && mailFlags.admissionSlip === true && mailFlags.paymentReceipt === true : mailFlags.applicationId === false && mailFlags.admissionSlip === false && mailFlags.paymentReceipt === false, JSON.stringify(verify.data.emails));
     check('application ID issued (IEM-YYYY-BT-NNNNNN)', /^IEM-\d{4}-BT-\d{6}$/.test(paidApp.applicationId || ''), paidApp.applicationId);
-    check('payment summary stored', paidApp.payment?.status === 'Paid' && paidApp.payment.amount === 1000 && paidApp.payment.method === 'Card');
+    check('payment summary stored with the exact amount and what it was for', paidApp.payment?.status === 'Paid' && paidApp.payment.amount === FEE && paidApp.payment.method === 'Card' && paidApp.payment.description === '1st semester fee - B.Tech / Computer Science & Engineering', JSON.stringify(paidApp.payment));
+    const payRec = await db.collection('payments').findOne({ orderId, status: 'paid' });
+    check('payment record: exact amount in paise, same as the application summary', payRec && payRec.amount === FEE * 100 && payRec.amount / 100 === paidApp.payment.amount && payRec.paymentId === paidApp.payment.paymentId, JSON.stringify(payRec && { amount: payRec.amount, paymentId: payRec.paymentId }));
     const replay = await api('POST', '/payments/verify', { token: tokenA, json: { ...ok.data, method: 'Card' } });
     check('replayed verification is idempotent', replay.status === 200 && replay.data.application.applicationId === paidApp.applicationId);
     check('order after payment -> 409', (await api('POST', '/payments/order', { token: tokenA })).status === 409);
@@ -265,7 +271,14 @@ const register = async (email, extra = {}) =>
     check('application ID email sent to applicant', idMail?.status === 'Sent' && idMail.to === emailA && idMail.body.includes(paidApp.applicationId), JSON.stringify(idMail && { status: idMail.status, err: idMail.lastError }));
     check(`emails used ${process.env.E2E_USE_SMTP ? 'real SMTP' : 'mock'} transport`, idMail?.transport === (process.env.E2E_USE_SMTP ? 'smtp' : 'mock'));
     check('admission slip email sent with PDF attachment', slipMail?.status === 'Sent' && slipMail.attachments[0]?.size > 1000);
-    check('exactly 2 emails despite replay', mails.length === 2, `got ${mails.length}`);
+    const receiptMail = mails.find((m) => m.type === 'PAYMENT_RECEIPT');
+    check('payment receipt email sent with PDF and the exact amount', receiptMail?.status === 'Sent' && receiptMail.attachments[0]?.size > 1000 && receiptMail.subject.endsWith('Rs. 1,40,000') && receiptMail.body.includes('Rs. 1,40,000'), receiptMail && receiptMail.subject);
+    check('exactly 3 emails despite replay', mails.length === 3, `got ${mails.length}`);
+    const receipt = await api('GET', `/applications/${app._id}/receipt`, { token: tokenA });
+    check('applicant downloads payment receipt PDF', receipt.status === 200 && receipt.data.toString().startsWith('%PDF'));
+    check("another applicant cannot download this receipt", (await api('GET', `/applications/${app._id}/receipt`, { token: tokenB })).status === 403);
+    const pgUser = await pool.query('SELECT address, phone, row_version FROM users WHERE email = $1', [emailA]);
+    check('account address in PostgreSQL updated from the form', pgUser.rows[0] && pgUser.rows[0].address === '22 Lake Road, Ballygunge, Kolkata, West Bengal - 700019' && pgUser.rows[0].row_version >= 2, JSON.stringify(pgUser.rows[0]));
     const slip = await api('GET', `/applications/${app._id}/slip`, { token: tokenA });
     check('applicant downloads admission slip PDF', slip.status === 200 && slip.data.toString().startsWith('%PDF'));
 
@@ -279,13 +292,13 @@ const register = async (email, extra = {}) =>
     ]);
     check('concurrent verifications: same single application ID', v1.status === 200 && v2.status === 200 && v1.data.application.applicationId === v2.data.application.applicationId);
     const mailsB = await db.collection('notifications').countDocuments({ application: new mongoose.Types.ObjectId(subB.data.application._id) });
-    check('concurrent verifications: emails sent once', mailsB === 2, `got ${mailsB}`);
+    check('concurrent verifications: emails sent once', mailsB === 3, `got ${mailsB}`);
 
     // ---------------- Admin ----------------
     console.log('\nAdmin: dashboard + scrutiny');
     const stats = await api('GET', '/admin/stats', { token: tokenAdmin });
     const submittedCount = stats.data.stats?.byStatus.find((s) => s._id === 'Submitted')?.count;
-    check('stats: 2 applications, 2 submitted, Rs. 2,000 collected', stats.data.stats?.total === 2 && submittedCount === 2 && stats.data.stats.feesCollected === 2000, JSON.stringify(stats.data.stats));
+    check('stats: 2 applications, 2 submitted, Rs. 2,80,000 collected', stats.data.stats?.total === 2 && submittedCount === 2 && stats.data.stats.feesCollected === 280000, JSON.stringify(stats.data.stats));
     const list = await api('GET', `/admin/applications?search=${encodeURIComponent(paidApp.applicationId)}`, { token: tokenAdmin });
     check('search by application ID', list.data.total === 1 && list.data.applications[0].applicationId === paidApp.applicationId);
     const regexProbe = await api('GET', '/admin/applications?search=(a+)+$', { token: tokenAdmin });
@@ -294,7 +307,7 @@ const register = async (email, extra = {}) =>
     check('pagination', paged.data.applications.length === 1 && paged.data.pages === 2);
 
     let detail = (await api('GET', `/admin/applications/${app._id}`, { token: tokenAdmin })).data;
-    check('detail: full application + documents + payments + emails + audit', detail.application.documents.length === 4 && detail.payments.length === 1 && detail.notifications.length === 2 && detail.auditLog.length >= 3);
+    check('detail: full application + documents + payments + emails + audit', detail.application.documents.length === 4 && detail.payments.length === 1 && detail.notifications.length === 3 && detail.auditLog.length >= 3);
     check('detail: allowed transitions from Submitted = [Review]', JSON.stringify(detail.application.allowedTransitions) === '["Review"]');
     check('admin can view any document', (await api('GET', `/applications/${app._id}/documents/scorecard_WBJEE`, { token: tokenAdmin })).status === 200);
 

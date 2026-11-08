@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { InrPipe } from '../../../shared/pipes/inr.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { RouterModule } from '@angular/router';
 import { DecisionCardComponent } from '../../../shared/components/decision-card/decision-card.component';
@@ -16,7 +17,7 @@ import { apiError, downloadBlob, errorMessage, openBlobInNewTab } from '../../..
 @Component({
   selector: 'app-status-tracker',
   standalone: true,
-  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, DecisionCardComponent, RouterModule],
+  imports: [CommonModule, InrPipe, StatusLabelPipe, SkeletonComponent, DecisionCardComponent, RouterModule],
   templateUrl: './status-tracker.component.html',
   styleUrls: ['./status-tracker.component.css']
 })
@@ -140,6 +141,22 @@ export class StatusTrackerComponent implements OnInit {
       error: (err) => {
         this.resubmitting.set(false);
         this.error.set(apiError(err, 'Could not resubmit.'));
+      }
+    });
+  }
+
+  downloadReceipt(): void {
+    const app = this.application();
+    if (!app) return;
+    this.busyKey.set('receipt');
+    this.applicationService.getReceipt(app._id).subscribe({
+      next: (blob) => {
+        this.busyKey.set('');
+        downloadBlob(blob, `Payment-Receipt-${app.applicationId}.pdf`);
+      },
+      error: async (err) => {
+        this.busyKey.set('');
+        this.error.set(await errorMessage(err, 'Could not download the receipt.'));
       }
     });
   }

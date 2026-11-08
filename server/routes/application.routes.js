@@ -15,5 +15,6 @@ router.post('/my-application/resubmit', verifyToken, requireRole('applicant'), c
 // Owner or admin
 router.get('/:id/documents/:docKey', verifyToken, controller.streamDocument);
 router.get('/:id/slip', verifyToken, controller.downloadSlip);
+router.get('/:id/receipt', verifyToken, controller.downloadReceipt);
 
 module.exports = router;

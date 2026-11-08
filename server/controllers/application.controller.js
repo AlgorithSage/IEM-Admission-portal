@@ -1,4 +1,5 @@
 const Application = require('../models/Application');
+const { syncProfileFromApplication } = require('../services/userProfile.service');
 const Draft = require('../models/Draft');
 const { audit } = require('../models/AuditLog');
 const { validateApplication } = require('../validators/application.validator');
@@ -7,7 +8,7 @@ const { findSlot, documentSlots } = require('../services/documents.service');
 const storage = require('../services/storage.service');
 const { claimUploads, releaseUploads, refFromUpload } = require('../services/uploads.service');
 const { findApplicationForUser, isOwner, transitionStatus, httpError } = require('../services/workflow.service');
-const { generateAdmissionSlip } = require('../services/slip.service');
+const { generateAdmissionSlip, generatePaymentReceipt } = require('../services/slip.service');
 const { serializeApplication, withAvailability } = require('../services/presenter');
 
 // @desc    Create an application from form data and previously uploaded files
@@ -82,6 +83,8 @@ const submitApplication = async (req, res, next) => {
 
     claimed = null;
     await Draft.deleteOne({ owner: String(req.user.id) }).catch(() => {});
+    // Keep the account (PostgreSQL) in step with the address and mobile given in the form
+    await syncProfileFromApplication(req.user.email, data);
     await audit({ application: app._id, actorId: req.user.id, actorRole: 'applicant', action: 'APPLICATION_CREATED', details: `${data.program}: ${data.streamPreferences.join(' > ')}` });
 
     res.status(201).json({ success: true, message: 'Form and documents saved. Proceed to payment.', application: serializeApplication(app) });
@@ -144,6 +147,23 @@ const downloadSlip = async (req, res, next) => {
     const pdf = await generateAdmissionSlip(app);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Admission-Slip-${app.applicationId}.pdf"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(pdf);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Download the payment receipt PDF
+// @route   GET /api/applications/:id/receipt
+// @access  Private (Owner or Admin)
+const downloadReceipt = async (req, res, next) => {
+  try {
+    const app = await loadAccessible(req);
+    if (!app.payment || app.payment.status !== 'Paid') throw httpError(400, 'The receipt is available after the fee is paid.');
+    const pdf = await generatePaymentReceipt(app);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Payment-Receipt-${app.applicationId}.pdf"`);
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(pdf);
   } catch (error) {
@@ -214,6 +234,7 @@ module.exports = {
   getMyApplication,
   streamDocument,
   downloadSlip,
+  downloadReceipt,
   replaceDocument,
   resubmitApplication
 };

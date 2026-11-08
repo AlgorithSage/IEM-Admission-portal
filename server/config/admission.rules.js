@@ -16,7 +16,6 @@ const GENDERS = ['Male', 'Female', 'Other'];
 const DEPARTMENTS = CATALOGUE.departments;
 const ADMISSION_YEAR = CATALOGUE.admissionYear;
 // Application fee in rupees, charged once before an application ID is issued
-const APPLICATION_FEE = CATALOGUE.applicationFee;
 const CLASS_XII_STREAMS = ['Science (PCM)', 'Science (PCMB)', 'Science (PCB)', 'Commerce', 'Arts / Humanities'];
 const PCM_STREAMS = CATALOGUE.pcmStreams;
 
@@ -60,6 +59,42 @@ const ACADEMIC = {
 };
 
 
+/**
+ * What an applicant pays after submitting the form, from the fee table for their first-preference
+ * stream: the booking amount when the stream has one (B.Tech: Class XII appearing this year vs
+ * pass-out), otherwise the 1st-semester fee. Returned with the breakdown shown on the payment page.
+ */
+const feeFor = (app) => {
+  const program = PROGRAMS[app.program];
+  const streamName = (app.streamPreferences || [])[0];
+  const stream = program && program.streams.find((s) => s.name === streamName);
+  if (!stream) return null;
+  const f = stream.fees;
+  const xiiYear = app.classXII && Number(app.classXII.passingYear);
+  let amount;
+  let basis;
+  if (f.bookingAppearing !== undefined) {
+    const appearing = xiiYear >= ADMISSION_YEAR;
+    amount = appearing ? f.bookingAppearing : f.bookingPassOut;
+    basis = appearing ? `Booking amount (Class XII appearing in ${ADMISSION_YEAR})` : 'Booking amount (Class XII pass-out)';
+  } else if (f.bookingAmount !== undefined) {
+    amount = f.bookingAmount;
+    basis = 'Booking amount';
+  } else {
+    amount = f.firstSemester;
+    basis = '1st semester fee';
+  }
+  return {
+    amount,
+    basis,
+    program: app.program,
+    stream: stream.name,
+    firstSemester: f.firstSemester,
+    laterSemester: f.laterSemester,
+    total: f.total
+  };
+};
+
 module.exports = {
   COMPETITIVE_EXAMS,
   EXAM_CODES,
@@ -67,7 +102,7 @@ module.exports = {
   GENDERS,
   DEPARTMENTS,
   ADMISSION_YEAR,
-  APPLICATION_FEE,
+  feeFor,
   PROGRAMS,
   PCM_STREAMS,
   CLASS_XII_STREAMS,

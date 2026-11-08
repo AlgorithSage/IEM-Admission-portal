@@ -4,6 +4,7 @@ const controller = require('../controllers/payment.controller');
 const { verifyToken, requireRole } = require('../middlewares/auth.middleware');
 
 router.use(verifyToken, requireRole('applicant'));
+router.get('/fee', controller.getFee);
 router.post('/order', controller.createOrder);
 router.post('/mock-checkout', controller.mockCheckout);
 router.post('/verify', controller.verifyPayment);

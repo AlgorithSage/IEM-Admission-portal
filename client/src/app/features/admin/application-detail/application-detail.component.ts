@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { InrPipe } from '../../../shared/pipes/inr.pipe';
 import { StatusLabelPipe } from '../../../shared/pipes/status-label.pipe';
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { FormsModule } from '@angular/forms';
@@ -27,7 +28,7 @@ const REUPLOAD_REASON = 'The file was not received. Please upload it again.';
 @Component({
   selector: 'app-application-detail',
   standalone: true,
-  imports: [CommonModule, StatusLabelPipe, SkeletonComponent, FormsModule, RouterModule],
+  imports: [CommonModule, InrPipe, StatusLabelPipe, SkeletonComponent, FormsModule, RouterModule],
   templateUrl: './application-detail.component.html',
   styleUrls: ['./application-detail.component.css']
 })
@@ -166,6 +167,20 @@ export class ApplicationDetailComponent implements OnInit {
       },
       () => this.viewingKey.set(null)
     );
+  }
+
+  downloadReceipt(): void {
+    this.busy.set('receipt');
+    this.applicationService.getReceipt(this.id).subscribe({
+      next: (blob) => {
+        this.busy.set('');
+        downloadBlob(blob, `Payment-Receipt-${this.app?.applicationId}.pdf`);
+      },
+      error: async (err) => {
+        this.busy.set('');
+        this.error.set(await errorMessage(err, 'Could not download the receipt.'));
+      }
+    });
   }
 
   downloadSlip(): void {

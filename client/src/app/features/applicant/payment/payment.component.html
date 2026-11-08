@@ -2,7 +2,7 @@
   <div class="narrow">
     <div class="page-head">
       <h1>Payment</h1>
-      <p>Pay the application fee to submit your application.</p>
+      <p>Pay the fee for your chosen course to submit your application.</p>
     </div>
     <div class="card box">
 
@@ -25,10 +25,21 @@
           <tr><th>1st Stream Preference</th><td>{{ application.streamPreferences?.[0] || '-' }}</td></tr>
           <tr><th>Documents</th><td>{{ application.documents.length }} uploaded</td></tr>
         </table>
-        <p class="note">Pay the application fee to submit your application. You will get your Application ID and admission slip by email.</p>
+
+        <ng-container *ngIf="fee() as f">
+          <h3 class="fee-title">Fee for {{ f.program }} / {{ f.stream }}</h3>
+          <table class="plain-table fee-table">
+            <tr><th>1st semester</th><td>{{ f.firstSemester | inr }}</td></tr>
+            <tr><th>Later semesters</th><td>{{ f.laterSemester | inr }} per semester</td></tr>
+            <tr><th>Course total</th><td>{{ f.total | inr }}</td></tr>
+            <tr class="payable"><th>Payable now<br><small>{{ f.basis }}</small></th><td><strong>{{ f.amount | inr }}</strong></td></tr>
+          </table>
+        </ng-container>
+
+        <p class="note">Paying submits your application. You will get your Application ID and admission slip by email.</p>
         <div class="actions">
           <a routerLink="/applicant/status" class="btn btn-outline">View Documents</a>
-          <button class="btn btn-primary" (click)="startPayment()">Pay Application Fee</button>
+          <button class="btn btn-primary" (click)="startPayment()" [disabled]="!fee()">Pay {{ fee() ? (fee()!.amount | inr) : '' }}</button>
         </div>
       </ng-container>
 
@@ -39,7 +50,7 @@
             <strong>Razorpay Checkout</strong>
             <span class="test-tag">Test mode - no real money</span>
           </div>
-          <p>Amount: <strong>Rs. {{ amountRupees | number }}</strong></p>
+          <p>Amount: <strong>{{ amountRupees | inr }}</strong></p>
           <p class="muted">Order: {{ order.orderId }}</p>
 
           <fieldset class="methods">
@@ -52,7 +63,7 @@
           <div class="actions">
             <button class="btn btn-outline" (click)="cancelCheckout()">Cancel</button>
             <button class="btn btn-outline" (click)="pay('failure')">Simulate Failure</button>
-            <button class="btn btn-primary" (click)="pay('success')">Pay Rs. {{ amountRupees | number }}</button>
+            <button class="btn btn-primary" (click)="pay('success')">Pay {{ amountRupees | inr }}</button>
           </div>
         </div>
       </ng-container>
@@ -66,13 +77,13 @@
           <span>Payment successful. Your application has been submitted.</span>
         </div>
         <ng-container *ngIf="emails() as mail">
-          <div *ngIf="mail.applicationId && mail.admissionSlip" class="alert alert-info">
+          <div *ngIf="mail.applicationId && mail.admissionSlip && mail.paymentReceipt" class="alert alert-info">
             <i class="fa-solid fa-envelope"></i>
-            <span>Your Application ID and admission slip have been emailed to <strong>{{ application.email }}</strong>. Check your spam folder if you cannot find them.</span>
+            <span>Your Application ID, payment receipt and admission slip have been emailed to <strong>{{ application.email }}</strong>. Check your spam folder if you cannot find them.</span>
           </div>
-          <div *ngIf="!(mail.applicationId && mail.admissionSlip)" class="alert alert-warning">
+          <div *ngIf="!(mail.applicationId && mail.admissionSlip && mail.paymentReceipt)" class="alert alert-warning">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span>We could not email your {{ !mail.admissionSlip ? 'admission slip' : 'Application ID' }} right now. Please download the admission slip below.</span>
+            <span>We could not email everything right now. Please download your payment receipt and admission slip below.</span>
           </div>
         </ng-container>
         <div class="alert alert-warning">
@@ -81,11 +92,15 @@
         </div>
         <table class="plain-table">
           <tr><th>Application ID</th><td><strong>{{ application.applicationId }}</strong></td></tr>
-          <tr><th>Amount Paid</th><td>Rs. {{ application.payment?.amount | number }}</td></tr>
+          <tr><th>Amount Paid</th><td>{{ application.payment?.amount | inr }}</td></tr>
+          <tr *ngIf="application.payment?.description"><th>Paid For</th><td>{{ application.payment?.description }}</td></tr>
           <tr><th>Payment ID</th><td>{{ application.payment?.paymentId }}</td></tr>
           <tr><th>Paid On</th><td>{{ application.payment?.paidAt | date:'dd MMM yyyy, h:mm a' }}</td></tr>
         </table>
         <div class="actions">
+          <button class="btn btn-outline" (click)="downloadReceipt()" [disabled]="downloadingReceipt()">
+            {{ downloadingReceipt() ? 'Downloading...' : 'Download Payment Receipt' }}
+          </button>
           <button class="btn btn-outline" (click)="downloadSlip()" [disabled]="downloading()">
             {{ downloading() ? 'Downloading...' : 'Download Admission Slip' }}
           </button>

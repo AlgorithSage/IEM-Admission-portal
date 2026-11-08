@@ -1,11 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { InrPipe } from '../../../shared/pipes/inr.pipe';
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { ApplicationService, PaymentEmails } from '../../../core/services/application.service';
-import { Application, PaymentOrder } from '../../../models/application.model';
+import { Application, FeeQuote, PaymentOrder } from '../../../models/application.model';
 import { apiError, downloadBlob, errorMessage } from '../../../core/utils/file.util';
 
 type Stage = 'loading' | 'summary' | 'checkout' | 'processing' | 'done';
@@ -14,7 +15,7 @@ type Stage = 'loading' | 'summary' | 'checkout' | 'processing' | 'done';
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [CommonModule, SkeletonComponent, FormsModule, RouterModule],
+  imports: [CommonModule, InrPipe, SkeletonComponent, FormsModule, RouterModule],
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.css']
 })
@@ -22,10 +23,12 @@ export class PaymentComponent implements OnInit {
   readonly stage = signal<Stage>('loading');
   readonly application = signal<Application | null>(null);
   readonly order = signal<PaymentOrder | null>(null);
+  readonly fee = signal<FeeQuote | null>(null);
   readonly methods = signal<string[]>([]);
   readonly error = signal('');
   readonly info = signal('');
   readonly downloading = signal(false);
+  readonly downloadingReceipt = signal(false);
   /** Set only right after a payment in this visit; null when the page is opened later */
   readonly emails = signal<PaymentEmails | null>(null);
   method = 'UPI';
@@ -40,7 +43,21 @@ export class PaymentComponent implements OnInit {
           return;
         }
         this.application.set(application);
-        this.stage.set(application.status === 'Payment Pending' ? 'summary' : 'done');
+        if (application.status !== 'Payment Pending') {
+          this.stage.set('done');
+          return;
+        }
+        // Show the exact amount and its basis before the applicant pays
+        this.applicationService.getFee().subscribe({
+          next: (res) => {
+            this.fee.set(res.fee);
+            this.stage.set('summary');
+          },
+          error: (err) => {
+            this.error.set(apiError(err, 'Could not work out the fee.'));
+            this.stage.set('summary');
+          }
+        });
       },
       error: (err) => {
         this.error.set(apiError(err, 'Could not load your application.'));
@@ -102,6 +119,22 @@ export class PaymentComponent implements OnInit {
   cancelCheckout(): void {
     this.stage.set('summary');
     this.info.set('Payment cancelled. You can pay any time from this page.');
+  }
+
+  downloadReceipt(): void {
+    const app = this.application();
+    if (!app) return;
+    this.downloadingReceipt.set(true);
+    this.applicationService.getReceipt(app._id).subscribe({
+      next: (blob) => {
+        this.downloadingReceipt.set(false);
+        downloadBlob(blob, `Payment-Receipt-${app.applicationId}.pdf`);
+      },
+      error: async (err) => {
+        this.downloadingReceipt.set(false);
+        this.error.set(await errorMessage(err, 'Could not download the receipt.'));
+      }
+    });
   }
 
   downloadSlip(): void {
