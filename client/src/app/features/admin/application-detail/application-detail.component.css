@@ -178,3 +178,19 @@
     flex-direction: column;
   }
 }
+
+.erase-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  background: #fef2f2;
+  cursor: pointer;
+}
+
+.erase-option input {
+  margin-top: 3px;
+}

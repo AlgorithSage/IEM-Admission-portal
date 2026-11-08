@@ -198,15 +198,19 @@ const removeApplication = async (req, res, next) => {
   try {
     const app = await Application.findById(req.params.id).catch(() => null);
     if (!app) throw httpError(404, 'Application not found.');
-    const { confirm, reason } = req.body || {};
+    const { confirm, reason, eraseAccount } = req.body || {};
     const expected = app.applicationId || app.fullName;
     if (String(confirm || '').trim() !== expected) {
       throw httpError(400, `Type ${expected} to confirm the deletion.`);
     }
     const why = String(reason || '').trim().slice(0, 300);
     if (why.length < 5) throw httpError(400, 'Give a reason for deleting this record (at least 5 characters).');
-    await deleteApplication(app, { id: req.user.id }, why);
-    res.status(200).json({ success: true, message: `${expected} has been deleted.` });
+    const { accountErased } = await deleteApplication(app, { id: req.user.id }, why, { eraseAccount: eraseAccount === true });
+    res.status(200).json({
+      success: true,
+      accountErased,
+      message: accountErased ? `${expected} has been deleted and the applicant's account erased.` : `${expected} has been deleted. The applicant's login account was kept.`
+    });
   } catch (error) {
     next(error);
   }

@@ -226,7 +226,7 @@ const completePayment = async ({ app, order, paymentId, signature, method, actor
  * Permanently deletes an application and the applicant's personal files.
  * Payments (accounting) and the audit trail are kept; a deletion entry records who did it and why.
  */
-const deleteApplication = async (app, actor, reason) => {
+const deleteApplication = async (app, actor, reason, { eraseAccount = false } = {}) => {
   const Notification = require('../models/Notification');
   const Draft = require('../models/Draft');
   const Upload = require('../models/Upload');
@@ -235,6 +235,23 @@ const deleteApplication = async (app, actor, reason) => {
   const owner = String(app.applicant && app.applicant._id ? app.applicant._id : app.applicant);
   const files = documentSlots(app).map((slot) => slot.get());
   const staged = await Upload.find({ owner, consumedAt: null });
+
+  // Erasure (DPDP Act 2023): the login account goes first, so an outage cannot leave a half-erased
+  // person behind. Applicant accounts only; an admin account is never removed from here.
+  let accountErased = false;
+  if (eraseAccount) {
+    const { query } = require('../config/postgres');
+    const User = require('../models/User');
+    const email = String(app.email).toLowerCase();
+    try {
+      // user_history rows go with it (ON DELETE CASCADE)
+      await query(`DELETE FROM users WHERE email = $1 AND role = 'applicant'`, [email]);
+    } catch (err) {
+      throw httpError(503, 'The login account could not be erased right now (account database unavailable). Nothing was deleted; try again.');
+    }
+    await User.deleteOne({ email, role: 'applicant' });
+    accountErased = true;
+  }
 
   await Application.deleteOne({ _id: app._id });
   await Promise.all([
@@ -251,8 +268,12 @@ const deleteApplication = async (app, actor, reason) => {
     actorRole: 'admin',
     action: 'APPLICATION_DELETED',
     fromStatus: app.status,
-    details: `${app.applicationId || 'No ID'} (${app.fullName}, ${app.email}) deleted. Reason: ${reason}`
+    // After an erasure the audit keeps no personal data: only the application ID and the reason
+    details: accountErased
+      ? `${app.applicationId || 'No ID'} deleted and the applicant's account erased. Reason: ${reason}`
+      : `${app.applicationId || 'No ID'} (${app.fullName}, ${app.email}) deleted; login account kept. Reason: ${reason}`
   });
+  return { accountErased };
 };
 
 module.exports = {

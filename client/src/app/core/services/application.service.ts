@@ -176,8 +176,8 @@ export class ApplicationService {
     return this.http.patch<AppResponse>(`${this.api}/admin/applications/${id}/status`, { status, remarks, version });
   }
 
-  deleteApplication(id: string, confirm: string, reason: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.api}/admin/applications/${id}`, { body: { confirm, reason } });
+  deleteApplication(id: string, confirm: string, reason: string, eraseAccount = false): Observable<{ success: boolean; message: string; accountErased: boolean }> {
+    return this.http.delete<{ success: boolean; message: string; accountErased: boolean }>(`${this.api}/admin/applications/${id}`, { body: { confirm, reason, eraseAccount } });
   }
 
   exportReport(filter: ListFilter): Observable<Blob> {

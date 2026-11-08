@@ -53,6 +53,8 @@ export class ApplicationDetailComponent implements OnInit {
   readonly deleteOpen = signal(false);
   deleteConfirm = '';
   deleteReason = '';
+  /** Right to erasure: also remove the applicant's login account */
+  eraseAccount = false;
 
   constructor(private route: ActivatedRoute, private applicationService: ApplicationService, private router: Router) {}
 
@@ -65,7 +67,7 @@ export class ApplicationDetailComponent implements OnInit {
     if (!this.app || this.deleteConfirm.trim() !== this.deleteKey || this.deleteReason.trim().length < 5) return;
     this.busy.set('delete');
     this.error.set('');
-    this.applicationService.deleteApplication(this.id, this.deleteConfirm.trim(), this.deleteReason.trim()).subscribe({
+    this.applicationService.deleteApplication(this.id, this.deleteConfirm.trim(), this.deleteReason.trim(), this.eraseAccount).subscribe({
       next: () => {
         this.busy.set('');
         this.router.navigate(['/admin/applications']);

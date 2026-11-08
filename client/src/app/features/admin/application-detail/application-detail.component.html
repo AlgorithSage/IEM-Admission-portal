@@ -213,7 +213,7 @@
         <div class="danger-head">
           <div>
             <h3>Delete record</h3>
-            <p class="muted">Permanently removes this application, its documents and emails. Payment records and the audit log are kept.</p>
+            <p class="muted">Permanently removes this application, its documents and emails. Payment records are kept as required for accounting.</p>
           </div>
           <button *ngIf="!deleteOpen()" type="button" class="btn btn-outline btn-danger" (click)="deleteOpen.set(true)">Delete record</button>
         </div>
@@ -222,11 +222,18 @@
           <input id="delete-reason" class="form-control" [(ngModel)]="deleteReason" placeholder="e.g. Duplicate or test application" maxlength="300">
           <label class="form-label" for="delete-confirm">Type <strong>{{ deleteKey }}</strong> to confirm <span class="required">*</span></label>
           <input id="delete-confirm" class="form-control" [(ngModel)]="deleteConfirm" autocomplete="off">
+          <label class="erase-option">
+            <input type="checkbox" [(ngModel)]="eraseAccount">
+            <span>
+              <strong>Also erase the applicant's login account</strong><br>
+              <small class="muted">Use when the applicant asks for their personal data to be erased. Their sign-in, contact details and address are removed; they cannot log in again. Payment records are kept as required by law, without their name.</small>
+            </span>
+          </label>
           <div class="actions">
-            <button type="button" class="btn btn-outline" (click)="deleteOpen.set(false); deleteConfirm = ''; deleteReason = ''">Cancel</button>
+            <button type="button" class="btn btn-outline" (click)="deleteOpen.set(false); deleteConfirm = ''; deleteReason = ''; eraseAccount = false">Cancel</button>
             <button type="button" class="btn btn-danger-solid" (click)="deleteRecord()"
               [disabled]="busy() === 'delete' || deleteConfirm.trim() !== deleteKey || deleteReason.trim().length < 5">
-              {{ busy() === 'delete' ? 'Deleting...' : 'Delete permanently' }}
+              {{ busy() === 'delete' ? 'Deleting...' : eraseAccount ? 'Delete and erase account' : 'Delete permanently' }}
             </button>
           </div>
         </div>

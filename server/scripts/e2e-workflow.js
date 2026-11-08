@@ -415,6 +415,30 @@ const register = async (email, extra = {}) =>
     check('audit log records who deleted it and why', !!delAudit && delAudit.details.includes('Duplicate test record') && delAudit.actorRole === 'admin');
     const statsAfter = (await api('GET', '/admin/stats', { token: tokenAdmin })).data.stats;
     check('stats reflect the deletion', statsAfter.total === 1);
+    check('default delete keeps the login account (applicant can still sign in)', (await api('POST', '/auth/login', { json: { email: emailB, password: 'Test@12345' } })).status === 200);
+    check('delete reply says the account was kept', del.data.accountErased === false && /kept/.test(del.data.message));
+
+    // ---------------- Erasure (right to erasure, DPDP Act 2023) ----------------
+    console.log('\nAdmin: delete record and erase account');
+    const eraseId = app._id;
+    const eraseKey = (await api('GET', `/admin/applications/${eraseId}`, { token: tokenAdmin })).data.application.applicationId;
+    const userIdA = (await pool.query('SELECT id FROM users WHERE email = $1', [emailA])).rows[0].id;
+    const historyBefore = (await pool.query('SELECT count(*)::int n FROM user_history WHERE user_id = $1', [userIdA])).rows[0].n;
+    check('applicant A has profile history before erasure', historyBefore >= 1);
+    const erase = await api('DELETE', `/admin/applications/${eraseId}`, { token: tokenAdmin, json: { confirm: eraseKey, reason: 'Applicant requested erasure of personal data', eraseAccount: true } });
+    check('delete with erasure -> 200 and reports the account erased', erase.status === 200 && erase.data.accountErased === true, JSON.stringify(erase.data));
+    check('account removed from PostgreSQL', (await pool.query('SELECT 1 FROM users WHERE email = $1', [emailA])).rows.length === 0);
+    check('profile history removed with it', (await pool.query('SELECT count(*)::int n FROM user_history WHERE user_id = $1', [userIdA])).rows[0].n === 0);
+    check('account copy removed from MongoDB', (await db.collection('users').countDocuments({ email: emailA })) === 0);
+    check('erased applicant can no longer sign in', (await api('POST', '/auth/login', { json: { email: emailA, password: 'Test@12345' } })).status === 401);
+    const eoid = new mongoose.Types.ObjectId(eraseId);
+    check('payment record kept (legal retention), with no name or email in it', await (async () => {
+      const p = await db.collection('payments').findOne({ application: eoid, status: 'paid' });
+      return !!p && !JSON.stringify(p).includes(emailA) && !JSON.stringify(p).includes('Riya');
+    })());
+    const eraseAudit = await db.collection('auditlogs').findOne({ application: eoid, action: 'APPLICATION_DELETED' });
+    check('erasure audit keeps no personal data (ID and reason only)', !!eraseAudit && eraseAudit.details.includes(eraseKey) && !eraseAudit.details.includes(emailA) && !eraseAudit.details.includes('Riya'), eraseAudit && eraseAudit.details);
+    check('admin account can never be erased this way', (await pool.query("SELECT 1 FROM users WHERE email = 'admin@iem.edu.in'")).rows.length === 1);
   } catch (err) {
     failed++;
     console.error('\nUnexpected error:', err.message);
