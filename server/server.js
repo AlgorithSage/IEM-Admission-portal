@@ -15,7 +15,9 @@ const PORT = process.env.PORT || 5000;
 // Warm up database connections. Failures are logged, not thrown: an unhandled rejection here would
 // crash the whole serverless function. Each API request retries the connection (see middleware below).
 connectDB().catch(() => {}); // connectDB already logged the (redacted) reason
-initPostgres();
+// On serverless hosts the instance is frozen between requests: a connection started at boot can stall
+// mid-handshake and surface as a timeout on the first request. There, connect on first use instead.
+if (!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)) initPostgres();
 
 // Upload storage location (documents are streamed only through the authenticated API)
 const { uploadDir: uploadsDir } = require('./middlewares/upload.middleware');

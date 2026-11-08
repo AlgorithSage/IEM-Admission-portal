@@ -134,9 +134,9 @@ const RETRY_COOLDOWN_MS = 10000;
 let initPromise = null;
 let lastFailureAt = 0;
 
-const ensurePostgres = () => {
+const ensurePostgres = ({ force = false } = {}) => {
   if (initPromise) return initPromise;
-  if (Date.now() - lastFailureAt < RETRY_COOLDOWN_MS) return Promise.resolve(false);
+  if (!force && Date.now() - lastFailureAt < RETRY_COOLDOWN_MS) return Promise.resolve(false);
   initPromise = initPostgres().then((ok) => {
     if (!ok) {
       lastFailureAt = Date.now();
@@ -161,7 +161,8 @@ module.exports = {
     };
   },
   query: async (text, params) => {
-    if (!(await ensurePostgres())) {
+    // A real query always gets one fresh attempt, even inside the cooldown after an earlier failure
+    if (!(await ensurePostgres()) && !(await ensurePostgres({ force: true }))) {
       throw new Error('PostgreSQL database is currently unavailable.');
     }
     try {
