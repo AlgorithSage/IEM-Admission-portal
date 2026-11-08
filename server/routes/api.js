@@ -15,11 +15,17 @@ router.use('/admin', adminRoutes);
 router.use('/uploads', uploadRoutes);
 
 // Health check endpoint
-router.get('/health', (req, res) => {
+// Health check: API and both databases (no secrets in the response)
+router.get('/health', async (req, res) => {
+  const mongoose = require('mongoose');
+  const { postgresStatus } = require('../config/postgres');
+  const postgres = await postgresStatus().catch((e) => ({ connected: false, error: e.message }));
+  const mongodb = { connected: mongoose.connection.readyState === 1, database: mongoose.connection.name || null };
   res.status(200).json({
-    status: 'OK',
+    status: postgres.connected && mongodb.connected ? 'OK' : 'DEGRADED',
     timestamp: new Date().toISOString(),
-    service: 'IEM Admission Portal REST API'
+    service: 'IEM Admission Portal REST API',
+    databases: { postgres, mongodb }
   });
 });
 

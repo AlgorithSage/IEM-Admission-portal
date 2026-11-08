@@ -52,8 +52,11 @@ const register = async (req, res, next) => {
 
     const emailNormalized = email.toLowerCase().trim();
 
-    // Check if user already exists in PostgreSQL
-    const existingPg = await query('SELECT id FROM users WHERE email = $1', [emailNormalized]);
+    // Check if user already exists in PostgreSQL (if it is down, the MongoDB fallback below checks instead)
+    const existingPg = await query('SELECT id FROM users WHERE email = $1', [emailNormalized]).catch((err) => {
+      console.error('[Auth] PostgreSQL unavailable during registration, using MongoDB:', err.message);
+      return { rows: [] };
+    });
     if (existingPg.rows.length > 0) {
       return res.status(409).json({
         success: false,

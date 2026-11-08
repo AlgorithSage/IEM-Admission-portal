@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 
 const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
+// Connection string, under any name the Vercel/Neon integrations use
+const URL_VARS = ['DATABASE_URL', 'POSTGRES_URL', 'DATABASE_URL_UNPOOLED', 'POSTGRES_URL_NON_POOLING', 'POSTGRES_PRISMA_URL'];
+const URL_SOURCE = URL_VARS.find((k) => process.env[k]) || null;
+const CONNECTION_URL = URL_SOURCE ? process.env[URL_SOURCE] : null;
+
 // TLS is configured explicitly (sslmode is stripped from the URL so pg does not reinterpret it) and the
 // server certificate is verified. Set PG_SSL_REJECT_UNAUTHORIZED=false only for a self-signed dev server.
 const buildPoolConfig = () => {
@@ -12,8 +17,8 @@ const buildPoolConfig = () => {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000
   };
-  if (process.env.DATABASE_URL) {
-    const url = new URL(process.env.DATABASE_URL);
+  if (CONNECTION_URL) {
+    const url = new URL(CONNECTION_URL);
     url.searchParams.delete('sslmode');
     return {
       ...common,
@@ -34,6 +39,7 @@ const buildPoolConfig = () => {
 const poolConfig = buildPoolConfig();
 
 let isPostgresConnected = false;
+let lastError = null;
 
 const pool = new Pool(poolConfig);
 
@@ -42,7 +48,8 @@ const initPostgres = async () => {
   try {
     client = await pool.connect();
     isPostgresConnected = true;
-    const host = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).hostname : process.env.PG_HOST || 'localhost';
+    lastError = null;
+    const host = CONNECTION_URL ? new URL(CONNECTION_URL).hostname : process.env.PG_HOST || 'localhost';
     console.log('[PostgreSQL] Connected to', host);
 
     // Enable pgcrypto for UUID generation
@@ -109,7 +116,9 @@ const initPostgres = async () => {
     return true;
   } catch (error) {
     isPostgresConnected = false;
-    console.error('[PostgreSQL] Initialization error:', error.message);
+    // Never keep or log credentials that a driver may echo back
+    lastError = String(error.message || error).replace(/postgres(ql)?:\/\/[^\s@]*@/gi, 'postgresql://***@');
+    console.error('[PostgreSQL] Initialization error:', lastError);
     return false;
   } finally {
     if (client) client.release();
@@ -139,6 +148,16 @@ const ensurePostgres = () => {
 module.exports = {
   pool,
   isPostgresReady: () => isPostgresConnected,
+  /** Health summary without secrets: which variable is used, connected or the last error */
+  postgresStatus: async () => {
+    const ok = await ensurePostgres();
+    return {
+      configured: !!URL_SOURCE || !!process.env.PG_HOST,
+      source: URL_SOURCE || (process.env.PG_HOST ? 'PG_HOST' : null),
+      connected: ok,
+      ...(ok ? {} : { error: lastError || (URL_SOURCE ? 'Not connected yet' : 'No DATABASE_URL set') })
+    };
+  },
   query: async (text, params) => {
     if (!(await ensurePostgres())) {
       throw new Error('PostgreSQL database is currently unavailable.');

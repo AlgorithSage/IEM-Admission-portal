@@ -84,7 +84,7 @@ export class StatusTrackerComponent implements OnInit {
     this.error.set('');
     this.viewingKey.set(doc.key);
     openBlobInNewTab(
-      this.applicationService.getDocument(app._id, doc.key),
+      this.applicationService.getDocument(app._id, doc.key, doc.uploadedAt),
       (msg) => {
         this.viewingKey.set(null);
         this.error.set(msg);

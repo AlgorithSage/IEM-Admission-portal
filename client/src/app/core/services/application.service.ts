@@ -84,7 +84,7 @@ export class ApplicationService {
         tap(() => {
           // Clear any cached copy of this replaced document
           for (const key of this.docCache.keys()) {
-            if (key.endsWith(`:${docKey}`)) this.docCache.delete(key);
+            if (key.includes(`:${docKey}:`)) this.docCache.delete(key);
           }
         })
       );
@@ -110,8 +110,15 @@ export class ApplicationService {
 
   // ---------- Files (owner or admin; streamed with auth, never public URLs) ----------
 
-  getDocument(appId: string, docKey: string): Observable<Blob> {
-    const cacheKey = `${appId}:${docKey}`;
+  /**
+   * A stored document. Cached per *file* (slot + upload time), not per slot: when a file is replaced
+   * the new one gets a new cache entry, so no screen can show the old file or a stale miss.
+   */
+  getDocument(appId: string, docKey: string, uploadedAt?: string): Observable<Blob> {
+    const cacheKey = `${appId}:${docKey}:${uploadedAt || ''}`;
+    if (!uploadedAt) {
+      return this.http.get(`${this.api}/applications/${appId}/documents/${encodeURIComponent(docKey)}`, { responseType: 'blob' });
+    }
     const cached = this.docCache.get(cacheKey);
     if (cached) return of(cached);
     return this.http
