@@ -15,7 +15,9 @@ const buildPoolConfig = () => {
     // Each serverless instance holds its own pool: keep it small so instances do not exhaust the database
     max: Number(process.env.PG_POOL_MAX || (isServerless ? 3 : 10)),
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000
+    // A cold serverless instance may be far from the database (e.g. US functions, Asian database):
+    // allow time for the first TLS + auth handshake instead of failing over to MongoDB
+    connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || (isServerless ? 15000 : 5000))
   };
   if (CONNECTION_URL) {
     const url = new URL(CONNECTION_URL);
@@ -162,7 +164,15 @@ module.exports = {
     if (!(await ensurePostgres())) {
       throw new Error('PostgreSQL database is currently unavailable.');
     }
-    return pool.query(text, params);
+    try {
+      return await pool.query(text, params);
+    } catch (err) {
+      // Connection-level failures (timeouts, dropped sockets) are retried once; SQL errors are not
+      if (err && (err.code === undefined || /^(ECONN|ETIMEDOUT|EPIPE)/.test(err.code)) && /timeout|terminated|ECONN|socket/i.test(err.message)) {
+        return pool.query(text, params);
+      }
+      throw err;
+    }
   },
   initPostgres: ensurePostgres
 };
