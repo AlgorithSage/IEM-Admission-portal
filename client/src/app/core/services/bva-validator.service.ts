@@ -186,7 +186,8 @@ export class BvaValidatorService {
       };
     }
 
-    let clean = raw.replace(/^(\+91|91)/, '').replace(/[\s-]/g, '');
+    // Country code only when 10 digits follow: 9123456780 is itself a valid number
+    let clean = raw.replace(/[\s-]/g, '').replace(/^(\+91|91)(?=\d{10}$)/, '');
 
     if (clean.length < 10) {
       return {

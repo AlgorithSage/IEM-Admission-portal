@@ -568,7 +568,7 @@ export class ApplicationFormComponent implements OnInit, OnDestroy {
   }
 
   private alternatePhoneValidator: ValidatorFn = (form: AbstractControl): ValidationErrors | null => {
-    const norm = (v: string) => (v || '').trim().replace(/^(\+91|91)/, '').replace(/[\s-]/g, '');
+    const norm = (v: string) => (v || '').trim().replace(/[\s-]/g, '').replace(/^(\+91|91)(?=\d{10}$)/, '');
     const alt = norm(form.get('alternatePhone')?.value);
     return alt && alt === norm(form.get('phone')?.value) ? { samePhone: true } : null;
   };

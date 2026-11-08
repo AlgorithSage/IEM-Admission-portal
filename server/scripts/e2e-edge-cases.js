@@ -197,6 +197,7 @@ const exam = (b, code) => b.competitiveExams.find((x) => x.exam === code);
     check('mobile starting with 5 -> 400', (await register(em('ph5'), { phone: '5830012345' })).status === 400);
     check('mobile with 9 digits -> 400', (await register(em('ph9'), { phone: '983001234' })).status === 400);
     check('mobile written as +91 98300 12345 -> 201', (await register(em('ph91'), { phone: '+91 98300 12345' })).status === 201);
+    check('mobile that itself starts with 91 (9123456780) -> 201', (await register(em('ph9123'), { phone: '9123456780' })).status === 201);
     check('name starting with a digit -> 400', (await register(em('n1'), { name: '1Riya' })).status === 400);
     check('name with HTML -> 400', (await register(em('nx'), { name: '<script>alert(1)</script>' })).status === 400);
     check('object instead of email (NoSQL injection) -> 400', (await api('POST', '/auth/register', { json: { name: 'Riya B', email: { $ne: '' }, password: 'Test@12345', phone: '9830012345' } })).status === 400);
@@ -372,6 +373,36 @@ const exam = (b, code) => b.competitiveExams.find((x) => x.exam === code);
     check('rejected applicant cannot apply again', (await api('POST', '/applications', { token: tokenA, json: applicationBody({ email: emailA, documents: await uploadAll(tokenA) }) })).status === 409);
     const mail = await db.collection('notifications').findOne({ application: new mongoose.Types.ObjectId(appA._id), subject: /Rejected$/ });
     check('rejection email recorded', !!mail);
+
+    // ---------------- Every field is stored ----------------
+    console.log('\nEvery form field is saved');
+    const emailC = em('full');
+    const tokenC = (await register(emailC)).data.token;
+    const full = applicationBody({ email: emailC, documents: await uploadAll(tokenC) });
+    Object.assign(full, { alternatePhone: '9123456780', category: 'OBC-A', nationality: 'Indian', gender: 'Other' });
+    full.parents = {
+      fatherName: 'Amit Banerjee', fatherPhone: '9830098765', fatherOccupation: 'Engineer',
+      motherName: 'Sunita Banerjee', motherPhone: '9830087654', motherOccupation: 'Teacher',
+      guardianName: 'Ravi Kumar', guardianRelation: 'Uncle', guardianPhone: '9830076543'
+    };
+    full.classXII.mathOrComputer = true;
+    const subC = await api('POST', '/applications', { token: tokenC, json: full });
+    check('application with every field filled is accepted', subC.status === 201, JSON.stringify(subC.data).slice(0, 300));
+    const stored = await db.collection('applications').findOne({ email: emailC });
+    const same = (label, got, sent) => check(`saved: ${label}`, String(got) === String(sent), `sent ${JSON.stringify(sent)} stored ${JSON.stringify(got)}`);
+    for (const k of ['fullName', 'email', 'phone', 'alternatePhone', 'dob', 'gender', 'category', 'nationality', 'address', 'city', 'state', 'pincode', 'program']) same(k, stored[k], full[k]);
+    for (const k of Object.keys(full.parents)) same(`parents.${k}`, stored.parents[k], full.parents[k]);
+    for (const k of ['board', 'school', 'passingYear', 'percentage']) same(`classX.${k}`, stored.classX[k], full.classX[k]);
+    for (const k of ['board', 'school', 'stream', 'passingYear', 'percentage', 'pcmPercentage', 'mathOrComputer']) same(`classXII.${k}`, stored.classXII[k], full.classXII[k]);
+    same('streamPreferences', stored.streamPreferences.join('|'), full.streamPreferences.join('|'));
+    same('declaration', stored.declarationAccepted, true);
+    full.competitiveExams.forEach((e) => {
+      const se = stored.competitiveExams.find((x) => x.exam === e.exam) || {};
+      for (const k of ['rollNumber', 'year', 'rank', 'score']) same(`${e.exam}.${k}`, se[k], e[k]);
+    });
+    const slots = ['Class X marksheet', 'Class XII marksheet', ...full.competitiveExams.map((e) => `${e.exam} scorecard`)];
+    const files = [stored.classX.marksheet, stored.classXII.marksheet, ...stored.competitiveExams.map((e) => e.scorecard)];
+    files.forEach((f, i) => check(`saved: ${slots[i]} file`, !!(f && f.fileName && f.originalName && f.fileSize > 0)));
   } catch (err) {
     failed++;
     console.error('\nUnexpected error:', err.stack);

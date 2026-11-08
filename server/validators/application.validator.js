@@ -30,7 +30,8 @@ const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const PIN_RE = /^[1-9]\d{5}$/;
 const DECIMAL_2DP_RE = /^-?\d+(\.\d{1,2})?$/;
 
-const normalizePhone = (v) => str(v).replace(/^(\+91|91)/, '').replace(/[\s-]/g, '');
+// Drop spaces/dashes, then a +91/91 country code only when 10 digits follow (9123456780 is a real number)
+const normalizePhone = (v) => str(v).replace(/[\s-]/g, '').replace(/^(\+91|91)(?=\d{10}$)/, '');
 
 const ageOn = (dob, today = new Date()) => {
   let age = today.getFullYear() - dob.getFullYear();

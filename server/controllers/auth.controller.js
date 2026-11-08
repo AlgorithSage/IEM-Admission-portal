@@ -17,7 +17,7 @@ const registrationError = ({ name, email, password, phone }) => {
   if (!NAME_RE.test(name.trim())) return 'Name must be 2-60 letters.';
   if (email.length > 254 || !EMAIL_RE.test(email.trim())) return 'Enter a valid email address.';
   if (password.length < 6 || password.length > 32) return 'Password must be 6-32 characters.';
-  if (!PHONE_RE.test(String(phone || '').replace(/^(\+91|91)/, '').replace(/[\s-]/g, ''))) return 'Mobile number must be 10 digits starting with 6-9.';
+  if (!PHONE_RE.test(String(phone || '').replace(/[\s-]/g, '').replace(/^(\+91|91)(?=\d{10}$)/, ''))) return 'Mobile number must be 10 digits starting with 6-9.';
   return null;
 };
 
