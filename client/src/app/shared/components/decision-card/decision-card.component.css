@@ -142,11 +142,6 @@ h2 {
   display: none;
 }
 
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border-light);
-}
-
 .err {
   color: #b91c1c;
   margin-top: 10px;

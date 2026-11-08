@@ -39,7 +39,6 @@
         <i class="fa-solid fa-download"></i> {{ downloading() ? 'Downloading...' : 'Download Admission Slip' }}
       </button>
       <ng-container [ngTemplateOutlet]="extra" />
-      <button type="button" class="btn btn-ghost" (click)="replay()" aria-label="Celebrate again"><i class="fa-solid fa-champagne-glasses"></i></button>
     </div>
     @if (error()) {
       <p class="err" role="alert">{{ error() }}</p>

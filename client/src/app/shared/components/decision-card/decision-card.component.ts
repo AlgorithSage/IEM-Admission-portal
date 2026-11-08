@@ -60,11 +60,6 @@ export class DecisionCardComponent implements AfterViewInit, OnDestroy {
     cancelAnimationFrame(this.frame);
   }
 
-  replay(): void {
-    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    this.burst();
-  }
-
   downloadSlip(): void {
     const app = this.application();
     this.downloading.set(true);
