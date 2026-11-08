@@ -27,3 +27,7 @@ yarn-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# AI & Workspace Tooling
+AI_COWORKER/
+
